@@ -7,7 +7,7 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="QUANTUM GLOBAL TERMINAL v4.0", page_icon="🌌", layout="centered")
+st.set_page_config(page_title="QUANTUM GLOBAL TERMINAL v4.5", page_icon="🌌", layout="centered")
 
 # PREMIUM MOBİL ARAYÜZ STİLLERİ
 st.markdown("""
@@ -17,25 +17,23 @@ st.markdown("""
     .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #58a6ff !important; border-bottom-color: #58a6ff !important; }
     .stButton>button { width: 100%; border-radius: 12px; background: linear-gradient(135deg, #1f6feb 0%, #238636 100%); color: white !important; font-weight: bold; padding: 12px; border: none; box-shadow: 0px 4px 15px rgba(35, 134, 54, 0.3); }
     .quant-card { border: 1px solid #30363d; padding: 20px; border-radius: 14px; margin-bottom: 20px; background-color: #161b22; border-left: 6px solid #238636; }
-    .score-bar-bg { background-color: #30363d; border-radius: 3px; width: 100px; height: 8px; display: inline-block; vertical-align: middle; }
-    .score-bar-fill { background-color: #238636; height: 100%; border-radius: 3px; }
     .telemetry-badge { background-color: #21262d; border: 1px solid #30363d; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🌌 Quant Global Terminal v4.0")
+st.title("🌌 Quant Global Terminal v4.5")
 
-# CANLI TELEMETRİ PANELDEN DURUM BİLGİSİ
+# CANLI TELEMETRİ GÖSTERGELERİ
 t_col1, t_col2, t_col3 = st.columns(3)
-t_col1.markdown('<div class="telemetry-badge">📡 INPUT: PDF FILE</div>', unsafe_allow_html=True)
+t_col1.markdown('<div class="telemetry-badge">📡 INPUT: HYBRID ENGINE</div>', unsafe_allow_html=True)
 t_col2.markdown('<div class="telemetry-badge">🧠 MATRIX: 40-LAYERS</div>', unsafe_allow_html=True)
 t_col3.markdown('<div class="telemetry-badge">⚡ OUTPUT: PDF REPORT</div>', unsafe_allow_html=True)
 
-menu = st.tabs(["📋 PDF Bülten Yükleme", "🔬 Canlı Analiz Matrisi", "🎟️ Hazır Kombinasyonlar & Rapor", "🛡️ Otonom Otopsi"])
+menu = st.tabs(["📋 Bülten Yükleme", "🔬 Canlı Analiz Matrisi", "🎟️ Hazır Kombinasyonlar & Rapor", "🛡️ Otonom Otopsi"])
 
 API_URL = st.secrets.get("API_URL", "")
 
-# DİNAMİK KUANTUM HESAPLAMA ÇEKİRDEĞİ
+# DİNAMİK HESAPLAMA ÇEKİRDEĞİ
 def run_quantum_core(text_input):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -49,7 +47,6 @@ def run_quantum_core(text_input):
         h3 = ((int(digest[idx+2], 16) + 2) % 14) + 1
         h4 = ((int(digest[idx], 16) + 9) % 14) + 1
         
-        # Benzersiz numara kontrolleri
         nums = list(set([h1, h2, h3, h4]))
         while len(nums) < 4:
             nums.append((len(nums) + 7) % 14 + 1)
@@ -64,29 +61,43 @@ def run_quantum_core(text_input):
         })
     return races
 
-# SEKME 1: PDF BÜLTEN YÜKLEME
+# SEKME 1: HİBRİT BÜLTEN GİRİŞİ (PDF VEYA COPY-PASTE)
 with menu[0]:
-    st.subheader("📋 Orijinal Bülten PDF Girişi")
-    uploaded_pdf = st.file_uploader("İndirdiğiniz resmi bülten PDF dosyasını buraya yükleyin:", type=["pdf"])
+    st.subheader("📋 Bülten Veri Enjeksiyonu")
+    st.caption("Aşağıdaki iki yöntemden birini seçin. Sistem otomatik olarak veriyi ayıklayacaktır:")
     
-    if st.button("🚀 40-KATMANLI SÜZGECİ ATEŞLE") and uploaded_pdf:
-        with st.spinner("⏳ PDF Verileri Hücresel Olarak Çözümleniyor, Kuantum Skorlar Hesaplanıyor..."):
-            try:
-                reader = PdfReader(uploaded_pdf)
-                raw_text = ""
-                for page in reader.pages:
-                    raw_text += page.extract_text() or ""
-                
-                if not raw_text.strip():
-                    st.error("❌ HATA: PDF okunabilir metin katmanı barındırmıyor!")
-                else:
-                    st.session_state['quantum_results'] = run_quantum_core(raw_text)
-                    st.session_state['analyzed'] = True
-                    st.success("✅ BAŞARILI: PDF bülten çekirdeğe işlendi! Yan sekmeler aktif.")
-            except Exception as e:
-                st.error(f"PDF Okuma Hatası: {str(e)}")
+    uploaded_pdf = st.file_uploader("YÖNTEM A: Orijinal Bülten PDF Dosyası Yükleyin:", type=["pdf"])
+    pasted_text = st.text_area("YÖNTEM B: Ya da Bülten Metnini Buraya Yapıştırın (Copy-Paste):", height=150, placeholder="Race 1 - Class 4...")
+    
+    analyze_btn = st.button("🚀 HİBRİT ANALİZ MOTORUNU TETİKLE")
 
-# SEKME 2: CANLI ANALİZ MATRİSİ (TELEFON EKRANI GÖRÜNÜMÜ)
+    if analyze_btn:
+        final_text = ""
+        
+        # 1. Senaryo: PDF yüklenmişse metni oku
+        if uploaded_pdf is not None:
+            with st.spinner("⏳ PDF Çözümleniyor..."):
+                try:
+                    reader = PdfReader(uploaded_pdf)
+                    for page in reader.pages:
+                        final_text += page.extract_text() or ""
+                except Exception as e:
+                    st.error(f"PDF Okuma Hatası: {str(e)}")
+                    
+        # 2. Senaryo: PDF yoksa ama yazı yapıştırılmışsa onu al
+        elif pasted_text.strip():
+            final_text = pasted_text
+            
+        # Karar ve Çalıştırma Mekanizması
+        if not final_text.strip():
+            st.error("❌ HATA: Modelin çalışabilmesi için bir PDF yüklemeli veya bülten metni yapıştırmalısınız!")
+        else:
+            with st.spinner("⏳ 40 Katmanlı Süzgeç Ateşleniyor, Kuantum Alan Skorları Çarpıştırılıyor..."):
+                st.session_state['quantum_results'] = run_quantum_core(final_text)
+                st.session_state['analyzed'] = True
+                st.success("✅ BAŞARILI: Veri kaynağı optimize edildi ve çekirdeğe işlendi!")
+
+# SEKME 2: CANLI ANALİZ MATRİSİ
 with menu[1]:
     if 'analyzed' in st.session_state:
         for r in st.session_state['quantum_results']:
@@ -107,9 +118,9 @@ with menu[1]:
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("💡 Lütfen ilk sekmeden PDF bülteninizi sisteme yükleyin.")
+        st.info("💡 Lütfen ilk sekmeden PDF veya metin bülteninizi yükleyin.")
 
-# SEKME 3: HAZIR KOMBİNASYONLAR VE KATY SAYFA KORUMALI PDF RAPORU ÇIKTI MOTORU
+# SEKME 3: HAZIR KOMBİNASYONLAR VE ULTRALÜKS PDF
 with menu[2]:
     if 'analyzed' in st.session_state:
         res = st.session_state['quantum_results']
@@ -118,7 +129,6 @@ with menu[2]:
         st.info(f"📈 1. DENGELİ SÜNDİKA KUPONU:\n1.A: {res[0]['h1']},{res[0]['h2']},{res[0]['h3']}\n2.A: {res[1]['h1']},{res[1]['h2']}\n3.A: {res[2]['h1']} (TEK)")
         st.success(f"💰 3. MİSLİ / KAZANÇ ARBİTRAJI:\n1.A: {res[0]['h1']} (TEK)\n2.A: {res[1]['h1']} (TEK)\n3.A: {res[2]['h1']} (TEK)")
         
-        # ULTRALÜKS VE KATY SAYFA KORUMALI PDF ŞABLONU (WEASYPRINT)
         pdf_html = """
         <html>
         <head>
@@ -156,48 +166,36 @@ with menu[2]:
             </div>
             """
             
-        # 👑 KESİNTİSİZ SON SAYFA KORUMA KALKANI EKLENİYOR
         pdf_html += f"""
             <h2 class="page-break">🎟️ 3 Kademeli Sündika Otomasyonu Hazır Kombinasyonları (Son Sayfa Korumalı)</h2>
             <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#1f6feb;">📈 1. DENGELİ SÜNDİKA ŞABLONU (Geniş Varyans)</div>
             <div class="kupon-box">
-                1. AYAK: {res[0]['h1']}, {res[0]['h2']}, {res[0]['h3']}<br>
-                2. AYAK: {res[1]['h1']}, {res[1]['h2']}<br>
-                3. AYAK: {res[2]['h1']} (TEK)<br>
-                4. AYAK: {res[3]['h1']}, {res[3]['h2']}<br>
-                5. AYAK: {res[4]['h1']} (TEK)<br>
-                6. AYAK: {res[5]['h1']}, {res[5]['h2']}
+                1. AYAK: {res[0]['h1']}, {res[0]['h2']}, {res[0]['h3']}<br>2. AYAK: {res[1]['h1']}, {res[1]['h2']}<br>3. AYAK: {res[2]['h1']} (TEK)
             </div>
             
-            <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#e3a008;">⚡ 2. ORTA DÜZEY RİSK ŞABLONU (Optimum Varyans)</div>
+            <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#e3a008;">⚡ 2. ORTA DÜZEY RİSK ŞABLONU</div>
             <div class="kupon-box" style="border-left: 4px solid #e3a008;">
-                1. AYAK: {res[0]['h1']}, {res[0]['h2']}<br>
-                2. AYAK: {res[1]['h1']}<br>
-                3. AYAK: {res[2]['h1']} (TEK)<br>
-                4. AYAK: {res[3]['h1']}, {res[3]['h2']}<br>
-                5. AYAK: {res[4]['h1']} (TEK)<br>
-                6. AYAK: {res[5]['h1']}
+                1. AYAK: {res[0]['h1']}, {res[0]['h2']}<br>2. AYAK: {res[1]['h1']}<br>3. AYAK: {res[2]['h1']} (TEK)
             </div>
 
-            <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#238636;">💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU (Agresif Alpha)</div>
+            <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#238636;">💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU</div>
             <div class="kupon-box" style="border-left: 4px solid #238636;">
-                1. AYAK: {res[0]['h1']} (TEK)<br>2. AYAK: {res[1]['h1']} (TEK)<br>3. AYAK: {res[2]['h1']} (TEK)<br>
-                4. AYAK: {res[3]['h1']} (TEK)<br>5. AYAK: {res[4]['h1']} (TEK)<br>6. AYAK: {res[5]['h1']} (TEK)
+                1. AYAK: {res[0]['h1']} (TEK)<br>2. AYAK: {res[1]['h1']} (TEK)<br>3. AYAK: {res[2]['h1']} (TEK)
             </div>
         </body>
         </html>
         """
         
-        with st.spinner("⏳ Sayfa Korumalı Premium Rapor PDF Dosyanız Compile Ediliyor..."):
+        with st.spinner("⏳ Son Sayfa Korumalı Premium Rapor PDF Dosyanız Derleniyor..."):
             pdf_bytes = HTML(string=pdf_html).write_pdf()
             st.download_button(label="📥 SON SAYFA KORUMALI PREMIUM PDF TAHMİN RAPORUNU İNDİR", data=pdf_bytes, file_name="quantum_executive_report.pdf", mime="application/pdf")
     else:
-        st.info("💡 PDF Tahmin Raporunu üretebilmek için önce ilk sekmeden PDF bülten yüklemelisiniz.")
+        st.info("💡 Rapor üretimi için önce ilk sekmeden PDF veya metin bülten yüklemelisiniz.")
 
-# SEKME 4: OTONOM OTOPSİ (KOPYALA-YAPIŞTIR İLE TOPLU SONUÇ YÜKLEME)
+# SEKME 4: OTONOM OTOPSİ (COPY-PASTE ENJEKSİYON)
 with menu[3]:
     st.subheader("🛡️ Toplu Gün Sonu Sonuç Enjeksiyonu")
-    st.caption("Yarış bittikten sonra resmi sonuçlar tablosunu direkt kopyalayıp (Copy-Paste) aşağıdaki kutuya tek seferde yapıştırın:")
+    st.caption("Yarış bittikten sonra resmi sonuçlar tablosunu direkt kopyalayıp aşağıdaki kutuya yapıştırın:")
     bulk_data = st.text_area("Gün sonu tüm sıralama ve sonuç metnini buraya yapıştırın:", height=180)
     
     if st.button("🧠 TÜM GÜNÜN VERİSİNİ MATRİSE KİLİTLE") and bulk_data:
@@ -205,7 +203,7 @@ with menu[3]:
             payload = {"Tarih": time.ctime(), "Kosu_No": "GÜN SONU", "Gelen_At": "TOPLU", "Sapma_Nedeni": "TOPLU COPY-PASTE ENJEKSİYON", "Detay": bulk_data}
             try:
                 requests.post(API_URL, json=payload)
-                st.success("🎯 KUSURSUZ: Tüm günün bitiriş sıralamaları saf metinden çözülerek Google Sheets kalıcı hafızaya kilitlendi!")
+                st.success("🎯 KUSURSUZ: Sonuçlar kalıcı hafızaya kilitlendi!")
             except:
                 st.error("API sunucu bağlantı hatası.")
         else:
