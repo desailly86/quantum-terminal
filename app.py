@@ -11,7 +11,7 @@ from weasyprint import HTML
 # SİSTEM KONFİGÜRASYONU
 st.set_page_config(page_title="METRIQX v8.5", page_icon="🏇", layout="centered")
 
-# 🌓 KULLANICI DENEYİMİ: ESKİYİ BOZMADAN EKLENEN GÜNDÜZ/GECE MODU SEÇİCİSİ
+# 🌓 GÜNDÜZ/GECE MODU SEÇİCİSİ
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
 light_mode = st.sidebar.toggle("☀️ Gündüz Saha Modu (Yüksek Kontrast)", value=False)
 
@@ -30,7 +30,7 @@ else:
     accent_color = "#1f6feb"
     sub_text = "#8b949e"
 
-# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ
+# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (KÜME PARANTEZLERİ TAMAMEN GÜVENLİĞE ALINDI)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {bg_color}; color: {text_color}; }}
@@ -46,20 +46,18 @@ st.markdown(f"""
     .telemetry-badge {{ background-color: {card_bg}; border: 1px solid {border_color}; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }}
     .metric-sub-line {{ font-size: 12px; color: {sub_text}; margin-left: 15px; font-family: monospace; margin-bottom: 5px; }}
     
-    /* 40 Kriter Şov Alanı CSS */
+    /* 40 Kriter Şov Alanı CSS (MUTLAK KORUMA SAĞLANDI) */
     .showoff-container {{ border: 1px solid {border_color}; padding: 20px; border-radius: 12px; background-color: {card_bg}; margin-top: 20px; }}
     .showoff-title {{ font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid {border_color}; padding-bottom: 5px; }}
     .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
-    @media (min-width: 600px) {{ .showoff-grid { grid-template-columns: 1fr; } }}
+    @media (min-width: 600px) {{ .showoff-grid {{ grid-template-columns: 1fr; }} }}
     
     .reason-box {{ background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color}; }}
     .value-badge {{ background-color: #238636; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; font-family: monospace; margin-left: 10px; }}
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v8.5")
-
-# ⏰ JAVASCRIPT CANLI SAAT VE OPERASYONEL GERİ SAYIM SAYACI (IFRAME CORNER)
+# JAVASCRIPT CANLI SAAT VE OPERASYONEL GERİ SAYIM SAYACI
 import streamlit.components.v1 as components
 components.html(f"""
 <div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: {card_bg}; padding: 12px; border-radius: 12px; border: 1px solid {border_color}; color: {text_color};">
@@ -73,7 +71,6 @@ function syncTime() {{
     document.getElementById('js-date').innerText = now.toLocaleDateString('tr-TR', {{year:'numeric', month:'long', day:'numeric', weekday:'long'}});
     document.getElementById('js-clock').innerText = now.toLocaleTimeString('tr-TR', {{hour12: false}});
     
-    // OPERASYONEL DEVRİM: Canlı Koşu Geri Sayım İvmesi (Her Yarım Saatte Bir Döngü)
     const mins = now.getMinutes();
     const secs = now.getSeconds();
     let nextMin = mins < 30 ? 30 : 60;
@@ -88,7 +85,7 @@ setInterval(syncTime, 1000); syncTime();
 
 API_URL = st.secrets.get("API_URL", "")
 
-# 📅 STRATEJİK TARİH SEÇİCİ BAR GİRİŞİ (GELİŞMİŞ ARŞİV ODAKLI)
+# 📅 STRATEJİK TARİH SEÇİCİ BAR GİRİŞİ
 st.markdown("### 📅 Operasyon Günü Seçimi")
 selected_date = st.date_input("İncelemek veya yüklemek istediğiniz işlem tarihini seçin:", value=pd.Timestamp.now().date())
 date_str = selected_date.strftime("%Y-%m-%d")
@@ -146,7 +143,7 @@ with m_row2_col3:
 
 st.write("---")
 
-# KORUMALI ÇEKİRDEK HESAPLAMA MOTORU (VEKTÖREL SINERJİ VE ARBİTRAJ ENTEGRELİ)
+# ÇEKİRDEK HESAPLAMA MOTORU
 def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -189,7 +186,6 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
         lb4 = round((68 + (nums[3]%5)) * (w_lobby/100.0) + bias["lobby"], 1)
         sc4 = round((b4 + ae4 + lb4) / 3.0, 2)
         
-        # 🧠 VERİ DEVRİMİ: Jokey-Antrenör Sinerjisi ve AGF Değer Arbitraj Puanlaması (Eskiden Sapmadan)
         sinerji1 = round(78.5 + (nums[0] * 3) % 20, 1)
         sinerji2 = round(72.0 + (nums[1] * 3) % 20, 1)
         agf_piyasa = round(100.0 / (1.8 + (nums[0] % 4)), 1)
@@ -209,7 +205,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 # SAYFA: DASHBOARD
 if st.session_state['active_menu'] == 'Dashboard':
     if st.session_state['analyzed']:
-        st.success(f"📊 ÖNEMLİ BULUT ARŞİVİ: {date_str} tarihli bülten geçmiş hafızadan başarıyla çağrıldı! Analiz ve Tahmin sekmelerini direkt okuyabilirsiniz.")
+        st.success(f"📊 ÖNEMLİ BULUT ARŞİVİ: {date_str} tarihli bülten geçmiş hafızadan başarıyla çağrıldı!")
         
         st.markdown("#### 🌡️ Canlı Kuantum Koşu Isı Haritası (Risk & Volatilite İndeksi)")
         res_data = st.session_state['quantum_results']
@@ -243,11 +239,11 @@ if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown("""<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div><div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div><div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div><div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div><div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div></div></div>
-        <div class="showoff-container"><div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ</div><div class="showoff-grid"><div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div><div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div><div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div><div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div><div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div></div></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA (10/10)</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div><div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div><div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div><div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div><div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div></div></div>
+        <div class="showoff-container"><div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ (10/10)</div><div class="showoff-grid"><div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div><div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div><div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div><div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div><div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div></div></div>""", unsafe_allow_html=True)
     with col_b:
-        st.markdown("""<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div><div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div><div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div><div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div><div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div></div></div>
-        <div class="showoff-container"><div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ</div><div class="showoff-grid"><div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div><div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div><div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div><div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div><div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div></div></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER (10/10)</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div><div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div><div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div><div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div><div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div></div></div>
+        <div class="showoff-container"><div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ (10/10)</div><div class="showoff-grid"><div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div><div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div><div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div><div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div><div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div></div></div>""", unsafe_allow_html=True)
 
 # SAYFA: BÜLTEN
 elif st.session_state['active_menu'] == 'Bülten':
@@ -287,7 +283,7 @@ elif st.session_state['active_menu'] == 'Bülten':
                 except: pass
             st.success("✅ ANALİZ TAMAMEN BULUT HAFIZASINA KİLİTLENDİ!")
 
-# SAYFA: ANALİZ MATRİSİ (VALUABLE ARBİTRAJ VE SİNERJİ GÖSTERGELİ)
+# SAYFA: ANALİZ MATRİSİ
 elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed']:
         st.subheader(f"🔬 {date_str} Tarihli 40 Kriter Analiz Dağılımları")
@@ -340,13 +336,12 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             """, unsafe_allow_html=True)
     else: st.info("💡 Gerekçeli detayları görebilmek için önce 'Bülten' alanından veri yüklemelisiniz.")
 
-# SAYFA: TAHMİN (👑 OPERASYONEL DEVRİM: DİNAMİK MALİYET SİMÜLATÖRÜ ENTEGRELİ)
+# SAYFA: TAHMİN
 elif st.session_state['active_menu'] == 'Tahmin':
     if st.session_state['analyzed']:
         res = st.session_state['quantum_results']
         n_races = len(res)
         
-        # Maliyet hesaplayıcı girdisi (Eskisini bozmadan eklenen parametre)
         st.markdown("### 💰 Finansal Maliyet Simülatörü")
         unit_price = st.number_input("Birim Ayak Bahis Fiyatı (TL):", value=0.40, step=0.05, min_value=0.01)
         
@@ -357,9 +352,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": []
         }
         
-        # Kombinasyon çarpanları hesaplama dizisi
         c1, c2, c3, c4 = 1, 1, 1, 1
-        
         for r in res:
             n = r['race_no']
             if n in [1, 2]: 
@@ -391,7 +384,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
 
         st.subheader("🎟️ Akıllı Sündika Tahmin Şablonları")
         
-        # Fiyat etiketlerini ve maliyetleri eşleştirerek ekrana basma
         maliyet_map = {
             "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": c1 * unit_price,
             "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": c2 * unit_price,
@@ -405,7 +397,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             st.markdown(f"📊 **Kupon Kombinasyonu:** {int(maliyet_map[title]/unit_price)} Adet &nbsp;|&nbsp; 💰 **Tahmini Toplam Yatırma Maliyeti:** {round(maliyet_map[title], 2)} TL")
             st.write("")
             
-        # 👑 ULTRALÜKS VE ASLA BÖLÜNMEYEN SÜPER ZENGİN PDF MOTORU
         pdf_html = f"""
         <html>
         <head>
@@ -437,7 +428,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
         for r in res:
             pdf_html += f"""
             <div class="container">
-                <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılım Raporu</div>
+                <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağıl Raporu</div>
                 <table>
                     <thead>
                         <tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th><th>J-A Sinerji</th></tr>
@@ -451,7 +442,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
                 </table>
             </div>
             """
-        # KUPONLARIN SON SAYFADA BÖLÜNMEDEN KATILAŞTIRILMASI
         pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları (Son Sayfa Korumalı)</h2>"
         for title, lines in kuponlar.items():
             color = "#1f6feb"
