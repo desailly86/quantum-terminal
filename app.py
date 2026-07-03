@@ -99,7 +99,7 @@ with m_row2_col2:
 
 st.write("---")
 
-# KORUMALI ÇEKİRDEK ANALİZ MOTORU
+# KORUMALI ÇEKİRDEK ANALİZ MOTORU (MUTLAK INDEX KORUMALI)
 def run_quantum_core(text_input, num_races):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -135,7 +135,7 @@ def run_quantum_core(text_input, num_races):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD
+# SAYFA: DASHBOARD (EKSİKSİZ 40 MATRIX PROTOKOLÜ)
 if st.session_state['active_menu'] == 'Dashboard':
     if st.session_state['analyzed']:
         st.success(f"📊 ÖNEMLİ VERİ GÜVENLİĞİ: {date_str} tarihine ait bülten geçmiş hafızadan başarıyla çağrıldı! Analiz ve Tahmin sekmelerini direkt okuyabilirsiniz.")
@@ -225,7 +225,7 @@ elif st.session_state['active_menu'] == 'Bülten':
                 except: pass
             st.success("✅ ANALİZ BAŞARIYLA KALICI BEYNE KİLİTLENDİ!")
 
-# 🔥 SAYFA: ANALİZ (GERİ GETİRİLEN VE TAMAMEN EKSİKSİZ KURUMSAL YAPILANDIRILMIŞ DEEP ALAN)
+# SAYFA: ANALİZ (4 SAFKAN DETAYLI EKSİKSİZ KATMAN)
 elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed']:
         st.subheader(f"🔬 {date_str} Tarihli 40 Kriter Derin Matris Analiz Detayları")
@@ -241,10 +241,11 @@ elif st.session_state['active_menu'] == 'Analiz':
                 """, unsafe_allow_html=True)
     else: st.info("💡 Bu tarihe ait bülten bulunamadı. Lütfen önce 'Bülten' yüklemesi yapın.")
 
-# SAYFA: TAHMİN
+# SAYFA: TAHMİN (GÖRSEL VE YAPILANDIRILMIŞ PREMIUM PDF MOTORU)
 elif st.session_state['active_menu'] == 'Tahmin':
     if st.session_state['analyzed']:
         res = st.session_state['quantum_results']
+        n_races = len(res)
         
         kuponlar = {
             "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": [],
@@ -272,26 +273,49 @@ elif st.session_state['active_menu'] == 'Tahmin':
             st.markdown(f"### {title}")
             st.code("\n".join(lines), language="text")
             
+        # 👑 ULTRALÜKS VE ASLA BOZULMAYAN WEASYPRINT PDF TASARIMI
         pdf_html = f"""
-        <html><head><meta charset='utf-8'><style>
-            @page {{ size: A4; margin: 20mm 12mm; }}
-            body {{ font-family: Arial, sans-serif; color: #24292e; }}
-            .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-            th, td {{ border: 1px solid #d0d7de; padding: 6px; font-size: 8.5pt; text-align: left; }}
-            th {{ background-color: #f6f8fa; }}
-            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1f6feb; font-size:11pt; line-height:1.5; page-break-inside: avoid; }}
+        <html>
+        <head>
+        <meta charset='utf-8'>
+        <style>
+            @page {{
+                size: A4;
+                margin: 20mm 12mm;
+                background-color: #fafbfc;
+                @bottom-right {{ content: "Sayfa " counter(page) " / " counter(pages); font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; }}
+                @bottom-left {{ content: "METRIQX EXECUTIVE INTEL REPORT v7.5"; font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; font-weight: bold; }}
+            }}
+            body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
+            .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
+            .banner h1 {{ margin: 0; font-size: 20pt; letter-spacing: 0.5px; }}
+            .banner p {{ margin: 5px 0 0 0; font-size: 9pt; color: #8b949e; font-family: monospace; }}
+            .container {{ background: white; border: 1px solid #d0d7de; padding: 18px; margin-bottom: 25px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
+            .race-header {{ font-size: 12pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 12px; }}
+            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 9pt; text-align: left; }}
+            th {{ background-color: #f6f8fa; font-weight: bold; color: #24292e; }}
+            .bet-summary {{ font-size: 9pt; background-color: #f6f8fa; padding: 10px; border-radius: 6px; border-left: 4px solid #1f6feb; margin-top: 10px; }}
             .page-break {{ page-break-before: always; }}
-        </style></head><body>
-            <h2>🌌 METRIQX EXECUTIVE REPORT - {date_str}</h2>
-            <h3>🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Tüm Bahis Seçenekleri</h3>
+            .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
+            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; font-size: 10.5pt; line-height: 1.6; margin-bottom: 20px; border-left: 5px solid #1f6feb; page-break-inside: avoid; }}
+        </style>
+        </head>
+        <body>
+            <div class="banner">
+                <h1>🏇 METRIQX: EQUINE QUANTUM TELEMETRY</h1>
+                <p>CORE-40 MATRIX DEEP DATA ANALYSIS // TOTAL {n_races} RACES VERIFIED</p>
+            </div>
+            <h2 style="font-size: 14pt; color: #0d1117; margin-bottom: 20px;">🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Tüm Bahis Seçenekleri</h2>
         """
         for r in res:
             pdf_html += f"""
-            <div class='container'>
-                <h3>🏇 KOŞU {r['race_no']} Derin Matris Dağılımı</h3>
+            <div class="container">
+                <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılımı</div>
                 <table>
-                    <thead><tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th></tr></thead>
+                    <thead>
+                        <tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th></tr>
+                    </thead>
                     <tbody>
                         <tr><td>🥇</td><td><b>#{r['h1']}</b></td><td><b>{r['name1']}</b></td><td><b>{r['score1']}</b></td><td>%{r['bio1']}</td><td>%{r['aero1']}</td><td>%{r['lobby1']}</td></tr>
                         <tr><td>🥈</td><td>#{r['h2']}</td><td>{r['name2']}</td><td>{r['score2']}</td><td>%{r['bio2']}</td><td>%{r['aero2']}</td><td>%{r['lobby2']}</td></tr>
@@ -299,16 +323,33 @@ elif st.session_state['active_menu'] == 'Tahmin':
                         <tr><td>🏅</td><td>#{r['h4']}</td><td>{r['name4']}</td><td>{r['score4']}</td><td>%{r['bio4']}</td><td>%{r['aero4']}</td><td>%{r['lobby4']}</td></tr>
                     </tbody>
                 </table>
+                <div class="bet-summary">
+                    <b>🎯 Önerilen Bahis Kombinasyonu:</b><br>
+                    • Ganyan: #{r['h1']} &nbsp;|&nbsp; • Sıralı İkili: {r['h1']} // {r['h2']} &nbsp;|&nbsp; • Tabela Bahsi: {r['h1']} // {r['h2']} // {r['h3']} // {r['h4']}
+                </div>
             </div>
             """
             
+        # KUPONLARIN SON SAYFA KORUMA SEKTÖRÜ (ASLA BÖLÜNMEZ VE RENK ŞERİTLİDİR)
         pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları (Son Sayfa Korumalı)</h2>"
         for title, lines in kuponlar.items():
-            pdf_html += f"<h3>{title}</h3><div class='kupon-box'>{'<br>'.join(lines)}</div>"
+            color = "#1f6feb"
+            if "ÇİFT" in title: color = "#e3a008"
+            elif "AGRESİF" in title: color = "#a855f7"
+            elif "MİSLİ" in title: color = "#238636"
+            
+            pdf_html += f"""
+                <div class="kupon-title">{title}</div>
+                <div class="kupon-box" style="border-left-color: {color};">
+                    {"<br>".join(lines)}
+                </div>
+            """
         pdf_html += "</div></body></html>"
         
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
+        with st.spinner("⏳ Son Sayfa Korumalı Detay Raporu PDF Dosyanız Derleniyor..."):
+            pdf_bytes = HTML(string=pdf_html).write_pdf()
+            # Kilitlenme hatasını önlemek için güvenli Streamlit download metodu
+            st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
     else: st.info("💡 Veri tabanında bu güne ait bülten bulunmuyor.")
 
 # SAYFA: YARIŞ SONUÇLARI
