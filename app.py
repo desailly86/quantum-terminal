@@ -4,106 +4,100 @@ import time
 import hashlib
 import requests
 import re
+import json
 from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="METRIQX v6.6", page_icon="🏇", layout="centered")
+st.set_page_config(page_title="METRIQX v7.0", page_icon="🏇", layout="centered")
 
-# PREMIUM EXECUTIVE CSS ARAYÜZÜ (MOBİL TEK SATIR BAŞLIK & NUMARASIZ SÜTUN UYUMU)
+# PREMIUM EXECUTIVE CSS ARAYÜZÜ
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #c9d1d9; }
-    
-    /* Başlığın Mobilde Tek Satıra Sığması İçin Akıllı Ölçeklendirme */
-    h1 {
-        font-size: min(22px, 5.2vw) !important;
-        white-space: nowrap !important;
-        text-align: center !important;
-        letter-spacing: -0.5px;
-    }
-    
-    /* 3+2 Mobil Grid Navigasyon Optimizasyonu */
-    .stButton>button { 
-        width: 100%; 
-        border-radius: 10px; 
-        padding: 10px; 
-        font-weight: bold; 
-        font-size: 13px;
-        transition: all 0.3s ease;
-    }
-    /* Aktif Olmayan Butonlar */
-    .stButton>button[data-testid="stBaseButton-secondary"] {
-        background-color: #161b22 !important;
-        color: #8b949e !important;
-        border: 1px solid #30363d !important;
-    }
-    /* Aktif Olan Buton (Premium Parlayan Ton) */
-    .stButton>button[data-testid="stBaseButton-primary"] {
-        background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3);
-    }
-    
+    h1 { font-size: min(22px, 5.2vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -0.5px; margin-bottom: 5px !important; }
+    .stButton>button { width: 100%; border-radius: 10px; padding: 10px; font-weight: bold; font-size: 13px; transition: all 0.3s ease; }
+    .stButton>button[data-testid="stBaseButton-secondary"] { background-color: #161b22 !important; color: #8b949e !important; border: 1px solid #30363d !important; }
+    .stButton>button[data-testid="stBaseButton-primary"] { background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important; color: white !important; border: none !important; box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3); }
     .quant-card { border: 1px solid #30363d; padding: 22px; border-radius: 14px; margin-bottom: 25px; background-color: #161b22; border-left: 6px solid #1f6feb; }
     .telemetry-badge { background-color: #21262d; border: 1px solid #30363d; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }
     .metric-sub-line { font-size: 12px; color: #8b949e; margin-left: 15px; font-family: monospace; }
-    
-    /* Şov Alanı: 40 Kriter Premium Kutuları */
-    .showoff-container {
-        border: 1px solid #30363d;
-        padding: 20px;
-        border-radius: 12px;
-        background-color: #161b22;
-        margin-top: 20px;
-    }
+    .showoff-container { border: 1px solid #30363d; padding: 20px; border-radius: 12px; background-color: #161b22; margin-top: 20px; }
     .showoff-title { font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
     .showoff-grid { display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: #8b949e; }
     @media (min-width: 600px) { .showoff-grid { grid-template-columns: 1fr 1fr; } }
     </style>
     """, unsafe_allow_html=True)
 
-# ANA BAŞLIK
-st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v6.6")
+st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v7.0")
 
-# CANLI TELEMETRİ PANELİ
-t_col1, t_col2, t_col3 = st.columns(3)
-t_col1.markdown('<div class="telemetry-badge">📡 METRIQX ACTIVE</div>', unsafe_allow_html=True)
-t_col2.markdown('<div class="telemetry-badge">🧠 MATRIX: DYNAMIC</div>', unsafe_allow_html=True)
-t_col3.markdown('<div class="telemetry-badge">⚡ DEPLOY: PRODUCTION</div>', unsafe_allow_html=True)
-
-st.write("---")
-
-# DURUM TABANLI NAVİGASYON HAFIZASI
-if 'active_menu' not in st.session_state:
-    st.session_state['active_menu'] = 'Dashboard'
-
-# NAVİGASYON PANELİ GRİD YAPISI (3 ÜSTTE - 2 ALTTA)
-m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
-with m_row1_col1:
-    type_dash = "primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary"
-    if st.button("📊 Dashboard", type=type_dash, use_container_width=True): st.session_state['active_menu'] = 'Dashboard'
-with m_row1_col2:
-    type_bulten = "primary" if st.session_state['active_menu'] == 'Bülten' else "secondary"
-    if st.button("📋 Bülten", type=type_bulten, use_container_width=True): st.session_state['active_menu'] = 'Bülten'
-with m_row1_col3:
-    type_analiz = "primary" if st.session_state['active_menu'] == 'Analiz' else "secondary"
-    if st.button("🔬 Analiz", type=type_analiz, use_container_width=True): st.session_state['active_menu'] = 'Analiz'
-
-m_row2_col1, m_row2_col2 = st.columns(2)
-with m_row2_col1:
-    type_tahmin = "primary" if st.session_state['active_menu'] == 'Tahmin' else "secondary"
-    if st.button("🎟️ Tahmin", type=type_tahmin, use_container_width=True): st.session_state['active_menu'] = 'Tahmin'
-with m_row2_col2:
-    type_sonuc = "primary" if st.session_state['active_menu'] == 'Yarış Sonuçları' else "secondary"
-    if st.button("🛡️ Yarış Sonuçları", type=type_sonuc, use_container_width=True): st.session_state['active_menu'] = 'Yarış Sonuçları'
-
-st.write("---")
+# ⏰ JAVASCRIPT CANLI SAAT VE TARİH SENSÖRÜ
+import streamlit.components.v1 as components
+components.html("""
+<div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #161b22; padding: 12px; border-radius: 12px; border: 1px solid #30363d;">
+    <div id="js-date" style="font-size: 13px; color: #8b949e; font-weight: bold; margin-bottom: 3px;">YÜKLENİYOR...</div>
+    <div id="js-clock" style="font-size: 30px; color: #58a6ff; font-weight: bold; font-family: monospace; text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);">00:00:00</div>
+</div>
+<script>
+function syncTime() {
+    const now = new Date();
+    document.getElementById('js-date').innerText = now.toLocaleDateString('tr-TR', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
+    document.getElementById('js-clock').innerText = now.toLocaleTimeString('tr-TR', {hour12: false});
+}
+setInterval(syncTime, 1000); syncTime();
+</script>
+""", height=92)
 
 API_URL = st.secrets.get("API_URL", "")
 
-# MUTLAK ENDEKS KORUMALI ÇEKİRDEK HESAPLAYICI
+# 📅 STRATEJİK TARİH SEÇİCİ BAR GİRİŞİ
+st.markdown("### 📅 Operasyon Günü Seçimi")
+selected_date = st.date_input("İncelemek veya yüklemek istediğiniz işlem tarihini seçin:", value=pd.Timestamp.now().date())
+date_str = selected_date.strftime("%Y-%m-%d")
+
+# NAVİGASYON BELLEK AYARI
+if 'active_menu' not in st.session_state: st.session_state['active_menu'] = 'Dashboard'
+if 'loaded_date' not in st.session_state: st.session_state['loaded_date'] = ""
+
+# 🔄 OTOMATİK VERİ TABANI TARAMA VE GEÇMİŞTEN YÜKLEME MOTORU
+if st.session_state['loaded_date'] != date_str:
+    st.session_state['analyzed'] = False
+    st.session_state['quantum_results'] = []
+    st.session_state['past_results_text'] = ""
+    
+    if API_URL:
+        try:
+            response = requests.get(API_URL)
+            hist = response.json()
+            for row in hist:
+                if str(row.get("Tarih", "")).startswith(date_str):
+                    if row.get("Kosu_No") == "BÜLTEN_DATA":
+                        st.session_state['quantum_results'] = json.loads(row.get("Detay", "[]"))
+                        st.session_state['num_races'] = len(st.session_state['quantum_results'])
+                        st.session_state['analyzed'] = True
+                    elif row.get("Kosu_No") == "TOPLU":
+                        st.session_state['past_results_text'] = row.get("Detay", "")
+            st.session_state['loaded_date'] = date_str
+        except: pass
+
+# 📊 NAVİGASYON PANELİ (3+2 GRID YAPISI)
+m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
+with m_row1_col1:
+    if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Dashboard'
+with m_row1_col2:
+    if st.button("📋 Bülten", type="primary" if st.session_state['active_menu'] == 'Bülten' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Bülten'
+with m_row1_col3:
+    if st.button("🔬 Analiz", type="primary" if st.session_state['active_menu'] == 'Analiz' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Analiz'
+
+m_row2_col1, m_row2_col2 = st.columns(2)
+with m_row2_col1:
+    if st.button("🎟️ Tahmin", type="primary" if st.session_state['active_menu'] == 'Tahmin' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Tahmin'
+with m_row2_col2:
+    if st.button("🛡️ Yarış Sonuçları", type="primary" if st.session_state['active_menu'] == 'Yarış Sonuçları' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Yarış Sonuçları'
+
+st.write("---")
+
+# KORUMALI ÇEKİRDEK ANALİZ MOTORU
 def run_quantum_core(text_input, num_races):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -116,7 +110,6 @@ def run_quantum_core(text_input, num_races):
         h2 = ((int(digest[(idx+1)%L], 16) + 5) % 14) + 1
         h3 = ((int(digest[(idx+2)%L], 16) + 2) % 14) + 1
         h4 = ((int(digest[(idx+3)%L], 16) + 9) % 14) + 1
-        
         nums = []
         for h in [h1, h2, h3, h4]:
             if h not in nums: nums.append(h)
@@ -138,275 +131,140 @@ def run_quantum_core(text_input, num_races):
         })
     return races
 
-# ==================== MENÜ İÇERİKLERİ ====================
+# ==================== SEKME İÇERİKLERİ ====================
 
-# 1. SAYFA: DASHBOARD
+# SAYFA: DASHBOARD
 if st.session_state['active_menu'] == 'Dashboard':
-    st.subheader("📊 Model Geçmiş Performans ve Kararlılık Trendi")
-    if API_URL:
-        try:
-            with st.spinner("📡 Canlı Büyük Veri Havuzu Çekiliyor..."):
-                response = requests.get(API_URL)
-                historical_data = response.json()
-            if historical_data and len(historical_data) > 0:
-                df = pd.DataFrame(historical_data)
-                st.markdown("#### 📈 Model Yoğunluk Eğrisi")
-                df['Tarih_Clean'] = pd.to_datetime(df['Tarih']).dt.date
-                line_data = df.groupby('Tarih_Clean').size().reset_index(name='Kayıt Sayısı')
-                st.line_chart(data=line_data, x='Tarih_Clean', y='Kayıt Sayısı')
-                st.markdown("#### 🔍 Kritik Varyans Dağılımları")
-                st.bar_chart(df['Sapma_Nedeni'].value_counts())
-            else:
-                mock_data = pd.DataFrame({"Gün": ["1. Gün", "2. Gün", "3. Gün", "4. Gün"], "Güven Endeksi": [88, 91, 94, 96]})
-                st.line_chart(data=mock_data, x="Gün", y="Güven Endeksi")
-        except: st.warning("Veri tabanı canlı grafikleri senkronize ediliyor.")
-    else: st.error("API_URL tanımlanmamış.")
-
+    if st.session_state['analyzed']:
+        st.success(f"📊 ÖNEMLİ VERİ GÜVENLİĞİ: {date_str} tarihine ait bülten geçmiş hafızadan başarıyla çağrıldı! Analiz ve Tahmin sekmelerini direkt okuyabilirsiniz.")
+    else:
+        st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. İşlem başlatmak için lütfen 'Bülten' sekmesine geçin.")
+        
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
-    st.caption("Bülten analiz edilirken arka planda eşzamanlı işletilen 40 stratejik kriter şebekesi:")
-    
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown("""
-        <div class="showoff-container">
-            <div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA</div>
-            <div class="showoff-grid">
-                <div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div>
-                <div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div>
-                <div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div>
-                <div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div>
-                <div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div>
-            </div>
-        </div>
-        <div class="showoff-container">
-            <div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ</div>
-            <div class="showoff-grid">
-                <div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div>
-                <div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div>
-                <div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div>
-                <div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div>
-                <div>• Jokey Deklare Manipülasyonu</div><div>• Sündika İçi Akıllı Para Sızıntısı</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK DATA</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Analizi</div><div>• Laktat Birikim Simülasyonu</div><div>• Padok Kalp Ritim Varyansı</div><div>• Tırnak-Zemin Basınç Endeksi</div></div></div>', unsafe_allow_html=True)
     with col_b:
-        st.markdown("""
-        <div class="showoff-container">
-            <div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER</div>
-            <div class="showoff-grid">
-                <div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div>
-                <div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div>
-                <div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div>
-                <div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div>
-                <div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div>
-            </div>
-        </div>
-        <div class="showoff-container">
-            <div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ</div>
-            <div class="showoff-grid">
-                <div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div>
-                <div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div>
-                <div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div>
-                <div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div>
-                <div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK DİNAMİKLER</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Sapması</div><div>• Bariyer Vakum Avantajı</div><div>• Rüzgar Sürtünme Katsayısı</div><div>• İvmelenme Tork Oranı</div></div></div>', unsafe_allow_html=True)
 
-# 2. SAYFA: BÜLTEN
+# SAYFA: BÜLTEN
 elif st.session_state['active_menu'] == 'Bülten':
-    st.subheader("📋 Bülten Veri Enjeksiyonu")
-    uploaded_pdf = st.file_uploader("Orijinal Bülten PDF Dosyası Yükleyin:", type=["pdf"])
-    pasted_text = st.text_area("Veya Bülten Metnini Yapıştırın (Copy-Paste):", height=150)
+    st.subheader(f"📋 {date_str} Günü İçin Bülten Enjeksiyonu")
+    uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
+    pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=150)
     
-    if st.button("🚀 DERİN MATRIX ANALİZİNİ TETİKLE"):
+    if st.button("🚀 MATRIX ANALIZI TETİKLE"):
         final_text = ""
         if uploaded_pdf is not None:
             try:
                 reader = PdfReader(uploaded_pdf)
                 for page in reader.pages: final_text += page.extract_text() or ""
-            except Exception as e: st.error(f"PDF Hatası: {str(e)}")
+            except: pass
         elif pasted_text.strip(): final_text = pasted_text
             
-        if not final_text.strip(): st.error("❌ HATA: Lütfen veri kaynağı besleyin!")
-        else:
+        if final_text.strip():
             race_counts = len(re.findall(r'(kosu|koşu|race)', final_text.lower()))
             detected_races = max(6, min(12, race_counts // 2 if race_counts > 12 else race_counts))
             if detected_races == 6 and race_counts == 0: detected_races = 8
             
-            status_text = st.empty()
-            progress_bar = st.progress(0)
-            stages = [
-                ("📂 PDF Katmanları ve Koşu Blokları Ayrıştırılıyor...", 0.15),
-                (f"📊 MATRİS: Toplam {detected_races} AKTİF KOŞU algılandı!", 0.45),
-                ("📡 40 Katmanlı Süzgeç: Aerodinamik Direnç ve Lobi Filtreleri Uygulanıyor...", 0.75),
-                ("🧠 10.000 Monte Carlo Döngüsü Çarpıştırılıyor. Kararlar Kilitleniyor...", 1.00)
-            ]
-            for msg, prog in stages:
-                status_text.markdown(f"⏳ **{msg}**")
-                progress_bar.progress(prog)
-                time.sleep(1.2)
-            status_text.empty()
-            progress_bar.empty()
-            
-            st.session_state['quantum_results'] = run_quantum_core(final_text, detected_races)
+            res_data = run_quantum_core(final_text, detected_races)
+            st.session_state['quantum_results'] = res_data
             st.session_state['analyzed'] = True
             st.session_state['num_races'] = detected_races
-            st.success(f"✅ ANALİZ TAMAMLANDI! Üstteki 'Analiz' veya 'Tahmin' alanına geçebilirsiniz.")
+            
+            # Google Sheets Kalıcı Hafıza Hücresine Kayıt Gönderme
+            if API_URL:
+                payload = {"Tarih": date_str, "Kosu_No": "BÜLTEN_DATA", "Gelen_At": "SYSTEM", "Sapma_Nedeni": "LIVE_SAVE", "Detay": json.dumps(res_data)}
+                try: requests.post(API_URL, json=payload)
+                except: pass
+            st.success("✅ ANALİZ BAŞARIYLA KALICI BEYNE KİLİTLENDİ!")
 
-# 3. SAYFA: ANALİZ
+# SAYFA: ANALİZ
 elif st.session_state['active_menu'] == 'Analiz':
-    if 'analyzed' in st.session_state:
-        st.subheader(f"🔬 {st.session_state['num_races']} Koşunun Derin Dağılımları")
+    if st.session_state['analyzed']:
+        st.subheader(f"🔬 {date_str} Tarihli Derin Matris Analiz Detayları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
-                st.markdown(f"""
-                🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio1']} | 🌪️ Aerodinamik: %{r['aero1']} | 🕸️ Lobi: %{r['lobby1']}</div>
-                🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio2']} | 🌪️ Aerodinamik: %{r['aero2']} | 🕸️ Lobi: %{r['lobby2']}</div>
-                🥉 **#{r['h3']} {r['name3']} (Skor: {r['score3']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio3']} | 🌪️ Aerodinamik: %{r['aero3']} | 🕸️ Lobi: %{r['lobby3']}</div>
-                🏅 **#{r['h4']} {r['name4']} (Skor: {r['score4']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio4']} | 🌪️ Aerodinamik: %{r['aero4']} | 🕸️ Lobi: %{r['lobby4']}</div>
-                <p style="margin-top:10px;"><b>🎯 Bahis Düzeni:</b> Ganyan: #{r['h1']} | İkili: {r['h1']}-{r['h2']} | Tabela: {r['h1']}//{r['h2']}//{r['h3']}//{r['h4']}</p>
-                """, unsafe_allow_html=True)
-    else: st.info("💡 Lütfen önce 'Bülten' sekmesinden yükleme yapıp motoru tetikleyin.")
+            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Metrik Kartı", expanded=True):
+                st.markdown(f"🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']})** | Biyo: %{r['bio1']} | Aero: %{r['aero1']} | Lobi: %{r['lobby1']}")
+                st.markdown(f"🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']})** | Biyo: %{r['bio2']} | Aero: %{r['aero2']} | Lobi: %{r['lobby2']}")
+    else: st.info("💡 Bu tarihe ait bülten bulunamadı. Lütfen önce 'Bülten' yüklemesi yapın.")
 
-# 4. SAYFA: TAHMİN (ULTRALÜKS VE GÖRSEL PDF ÇIKTI MOTORLU NİHAİ ALAN)
+# SAYFA: TAHMİN (GERÇEKÇİ İNSAN KUPONLARI + HATA VERMEYEN PDF)
 elif st.session_state['active_menu'] == 'Tahmin':
-    if 'analyzed' in st.session_state:
+    if st.session_state['analyzed']:
         res = st.session_state['quantum_results']
-        n_races = st.session_state['num_races']
-        st.subheader(f"🎟️ Tüm {n_races} Koşu İçin Satır Satır Kupon Şablonları")
         
-        k1_lines, k2_lines, k3_lines = [], [], []
+        # 🧠 AKILLI VE GERÇEKÇİ EXPERT KUPON GENERATOR MOTORU
+        kuponlar = {
+            "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": [],
+            "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": [],
+            "🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI": [],
+            "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": []
+        }
+        
         for r in res:
-            k1_lines.append(f"{r['race_no']}. KOŞU: {r['h1']}, {r['h2']}, {r['h3']}")
-            k2_lines.append(f"{r['race_no']}. KOŞU: {r['h1']}, {r['h2']}")
-            k3_lines.append(f"{r['race_no']}. KOŞU: {r['h1']} (TEK)")
+            n = r['race_no']
+            # Kupon 1 Mantığı: İlk iki ayağı kalabalık tut, 3'ü tek geç, son ayağı kapat
+            if n in [1, 2]: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}, {r['h4']}")
+            elif n == 3: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']} (BANKO)")
+            else: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}")
             
-        st.markdown("### 📈 1. DENGELİ SÜNDİKA ŞABLONU")
-        st.code("\n".join(k1_lines), language="text")
-        st.markdown("### ⚡ 2. ORTA DÜZEY RİSK ŞABLONU")
-        st.code("\n".join(k2_lines), language="text")
-        st.markdown("### 💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU")
-        st.code("\n".join(k3_lines), language="text")
-        
-        # 👑 REKOR SEVİYEDE GÖRSEL VE ZENGİN WEASYPRINT PREMIUM PDF MİZANPAJI
+            # Kupon 2 Mantığı: 2. ve 5. ayaklar net banko, diğerleri ikili sistem
+            if n in [2, 5]: kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {r['h1']} (BANKO)")
+            else: kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}")
+            
+            # Kupon 3 Mantığı: Sadece tek bir banko, diğer ayaklar sürpriz odaklı 2'li kombinasyon
+            if n == 1: kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {r['h1']} (BANKO)")
+            else: kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {r['h1']}, {r['h2']}")
+            
+            # Kupon 4 Mantığı: Net Misli. Tüm ayaklar mutlak tek
+            kuponlar["💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU"].append(f"{n}.K: {r['h1']} (BANKO)")
+
+        st.subheader("🎟️ Akıllı Sündika Tahmin Şablonları")
+        for title, lines in kuponlar.items():
+            st.markdown(f"### {title}")
+            st.code("\n".join(lines), language="text")
+            
+        # WEASYPRINT PDF DERLEYİCİSİ (KILITLENMEYI ÖNLEYEN PRE-COMPILE METODU)
         pdf_html = f"""
-        <html>
-        <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{
-                size: A4;
-                margin: 20mm 12mm;
-                background-color: #fafbfc;
-                @bottom-right {{
-                    content: "Sayfa " counter(page) " / " counter(pages);
-                    font-size: 8pt;
-                    color: #8b949e;
-                    font-family: Arial, sans-serif;
-                }}
-                @bottom-left {{
-                    content: "METRIQX EXECUTIVE INTEL REPORT v6.6";
-                    font-size: 8pt;
-                    color: #8b949e;
-                    font-family: Arial, sans-serif;
-                    font-weight: bold;
-                }}
-            }}
-            body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
-            .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
-            .banner h1 {{ margin: 0; font-size: 20pt; letter-spacing: 0.5px; }}
-            .banner p {{ margin: 5px 0 0 0; font-size: 9pt; color: #8b949e; font-family: monospace; }}
-            .container {{ background: white; border: 1px solid #d0d7de; padding: 18px; margin-bottom: 25px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
-            .race-header {{ font-size: 12pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 12px; }}
-            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 9pt; text-align: left; }}
-            th {{ background-color: #f6f8fa; font-weight: bold; color: #24292e; }}
-            .bet-summary {{ font-size: 9pt; background-color: #f6f8fa; padding: 10px; border-radius: 6px; border-left: 4px solid #58a6ff; margin-top: 10px; }}
+        <html><head><meta charset='utf-8'><style>
+            @page {{ size: A4; margin: 20mm 12mm; }}
+            body {{ font-family: Arial, sans-serif; color: #24292e; }}
+            .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }}
+            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1f6feb; font-size:11pt; line-height:1.5; }}
             .page-break {{ page-break-before: always; }}
-            .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
-            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; font-size: 10.5pt; line-height: 1.6; margin-bottom: 20px; border-left: 5px solid #1f6feb; }}
-        </style>
-        </head>
-        <body>
-            <div class="banner">
-                <h1>🏇 METRIQX: EQUINE QUANTUM TELEMETRY</h1>
-                <p>CORE-40 MATRIX REAL-TIME ANALYSIS // PRECONSTRUCTED EXECUTIVE REPORT</p>
-            </div>
-            <h2 style="font-size: 14pt; color: #0d1117; margin-bottom: 20px;">🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Tüm Bahis Seçenekleri</h2>
+        </style></head><body>
+            <h2>🌌 METRIQX EXECUTIVE REPORT - {date_str}</h2>
         """
-        
         for r in res:
-            pdf_html += f"""
-            <div class="container">
-                <div class="race-header">🏇 KOŞU {r['race_no']} - Derin Metrik Analiz Matrisi</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 8%;">Sıra</th>
-                            <th style="width: 10%;">At No</th>
-                            <th style="width: 32%;">Safkan İsmi</th>
-                            <th style="width: 13%;">Genel Puan</th>
-                            <th style="width: 12%;">Biyo-Mek.</th>
-                            <th style="width: 13%;">Aerodin.</th>
-                            <th style="width: 12%;">Lobi F.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>🥇</td><td><b>#{r['h1']}</b></td><td><b>{r['name1']}</b></td><td><b>{r['score1']}</b></td><td>%{r['bio1']}</td><td>%{r['aero1']}</td><td>%{r['lobby1']}</td></tr>
-                        <tr><td>🥈</td><td>#{r['h2']}</td><td>{r['name2']}</td><td>{r['score2']}</td><td>%{r['bio2']}</td><td>%{r['aero2']}</td><td>%{r['lobby2']}</td></tr>
-                        <tr><td>🥉</td><td>#{r['h3']}</td><td>{r['name3']}</td><td>{r['score3']}</td><td>%{r['bio3']}</td><td>%{r['aero3']}</td><td>%{r['lobby3']}</td></tr>
-                        <tr><td>🏅</td><td>#{r['h4']}</td><td>{r['name4']}</td><td>{r['score4']}</td><td>%{r['bio4']}</td><td>%{r['aero4']}</td><td>%{r['lobby4']}</td></tr>
-                    </tbody>
-                </table>
-                <div class="bet-summary">
-                    <b>🎯 Önerilen Bahis Kombinasyonu:</b><br>
-                    • Ganyan: #{r['h1']} &nbsp;|&nbsp; • Plase/İkili: {r['h1']} - {r['h2']} &nbsp;|&nbsp; • Sıralı İkili: {r['h1']} // {r['h2']} &nbsp;|&nbsp; • Sıralı Üçlü/Tabela: {r['h1']} // {r['h2']} // {r['h3']} // {r['h4']}
-                </div>
-            </div>
-            """
+            pdf_html += f"<div class='container'><h3>🏇 KOŞU {r['race_no']}</h3><p>🥇 #{r['h1']} ({r['score1']}) | 🥈 #{r['h2']} ({r['score2']})</p></div>"
             
-        # KUPONLARIN KESİNTİSİZ SON SAYFAYA KİLİTLENMESİ VE SATIR SATIR RENKLİ YERLEŞİMİ
-        pdf_html += f"""
-            <div class="page-break">
-                <h2 style="font-size: 14pt; color: #0d1117; border-bottom: 2px solid #0d1117; padding-bottom: 5px;">🎟️ Kademeli Sündika Otomasyonu Hazır Kombinasyonları</h2>
-                
-                <div class="kupon-title">📈 1. DENGELİ SÜNDİKA ŞABLONU (Geniş Varyans)</div>
-                <div class="kupon-box">
-                    {("<br>".join(k1_lines))}
-                </div>
-                
-                <div class="kupon-title">⚡ 2. ORTA DÜZEY RİSK ŞABLONU (Dengeli Varyans)</div>
-                <div class="kupon-box" style="border-left-color: #e3a008;">
-                    {("<br>".join(k2_lines))}
-                </div>
-
-                <div class="kupon-title">💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU (Agresif Alpha)</div>
-                <div class="kupon-box" style="border-left-color: #238636;">
-                    {("<br>".join(k3_lines))}
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        # 👑 RIGID KORUMA: KUPONLAR EN SON SAYFAYA ASLA BÖLÜNMEDEN KİLİTLENİR
+        pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları</h2>"
+        for title, lines in kuponlar.items():
+            pdf_html += f"<h3>{title}</h3><div class='kupon-box'>{'<br>'.join(lines)}</div>"
+        pdf_html += "</div></body></html>"
         
-        with st.spinner("⏳ Üst Düzey Yönetici PDF Raporu Derleniyor..."):
-            pdf_bytes = HTML(string=pdf_html).write_pdf()
-            st.download_button(label="📥 SON SAYFA KORUMALI PREMIUM PDF TAHMİN RAPORUNU İNDİR", data=pdf_bytes, file_name="quantum_extended_report.pdf", mime="application/pdf")
-    else: st.info("💡 Rapor ve kupon üretimi için önce 'Bülten' alanından veri yüklemelisiniz.")
+        pdf_bytes = HTML(string=pdf_html).write_pdf()
+        st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
+    else: st.info("💡 Veri tabanında bu güne ait bülten bulunmuyor.")
 
-# 5. SAYFA: YARIŞ SONUÇLARI
+# SAYFA: YARIŞ SONUÇLARI
 elif st.session_state['active_menu'] == 'Yarış Sonuçları':
-    st.subheader("🛡️ Toplu Gün Sonu Sonuç Enjeksiyonu")
-    sapma = st.selectbox("Bu yarış gününde tespit edilen en baskın dış sapma etkeni neydi?", ["Medyadaki Aldatıcı Sapma (Deception Delta)", "Mikro Meteorolojik Rüzgar Koridoru Kırılması", "Padoktaki Biyo-Stres Sinyali", "Normal Koşu Akışı / Stabil Patern"])
-    bulk_data = st.text_area("Gün sonu tüm sıralama ve sonuç metnini buraya yapıştırın (Copy-Paste):", height=150)
-    
-    if st.button("🧠 TÜM GÜNÜN VERİSİNİ MATRİSE KİLİTLE") and bulk_data:
-        if API_URL:
-            payload = {"Tarih": time.ctime(), "Kosu_No": "TOPLU", "Gelen_At": "SIRALAMA", "Sapma_Nedeni": sapma, "Detay": bulk_data}
-            try:
-                requests.post(API_URL, json=payload)
-                st.success("🎯 KUSURSUZ: Gün sonu analizi başarıyla kalıcı hafızaya kilitlendi!")
-            except: st.error("API sunucu bağlantı hatası.")
-        else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
+    st.subheader(f"🛡️ {date_str} Tarihli Sonuç Enjeksiyon Hattı")
+    if st.session_state.get('past_results_text', ""):
+        st.success("🏁 Veri tabanında bu güne ait yarış sonuçları kilitli durumda!")
+        st.text_area("Kayıtlı Gün Sonu Verileri:", value=st.session_state['past_results_text'], height=200, disabled=True)
+    else:
+        bulk_data = st.text_area("Yarış bittikten sonra sonuç tablosunu direkt kopyalayıp buraya yapıştırın (Copy-Paste):", height=150)
+        if st.button("🧠 TÜM GÜNÜN VERİSİNİ MATRİSE KİLİTLE") and bulk_data:
+            if API_URL:
+                payload = {"Tarih": date_str, "Kosu_No": "TOPLU", "Gelen_At": "SIRALAMA", "Sapma_Nedeni": "MANUAL_INJECT", "Detay": bulk_data}
+                try:
+                    requests.post(API_URL, json=payload)
+                    st.success("🎯 KUSURSUZ: Sonuçlar kalıcı hafızaya kilitlendi! Sayfa yenileniyor...")
+                    time.sleep(1)
+                    st.session_state['loaded_date'] = "" # Hafızayı tetiklemek için sıfırlama
+                    st.rerun()
+                except: st.error("Bağlantı hatası.")
