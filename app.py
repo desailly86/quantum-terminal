@@ -17,16 +17,16 @@ light_mode = st.sidebar.toggle("☀️ Gündüz Saha Modu (Yüksek Kontrast)", v
 
 if light_mode:
     bg_color = "#ffffff"
-    text_color = "#24292e"
+    text_color = "#000000"
     card_bg = "#f6f8fa"
     border_color = "#d0d7de"
     accent_color = "#0969da"
-    sub_text = "#57606a"
+    sub_text = "#333333"
     intel_bg = "#fff3cd"
     intel_border = "#bf4b21"
 else:
     bg_color = "#0d1117"
-    text_color = "#c9d1d9"
+    text_color = "#ffffff"
     card_bg = "#161b22"
     border_color = "#30363d"
     accent_color = "#1f6feb"
@@ -46,13 +46,18 @@ st.markdown(f"""
     .stButton>button[data-testid="stBaseButton-secondary"] {{ background-color: {card_bg} !important; color: {sub_text} !important; border: 1px solid {border_color} !important; }}
     .stButton>button[data-testid="stBaseButton-primary"] {{ background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important; color: white !important; border: none !important; box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3); }}
     
-    /* NEON FINTECH YEŞİLİ TETİKLEME BUTONU MÜHRÜ */
-    div[data-testid="stBlock"] button[key="trigger_btn"] {{
+    /* 🔥 KORUMALI BULANIKLIK ENGELLEYİCİ NEON YEŞİL TETİKLEME BUTONU MÜHRÜ */
+    .trigger-container button {{
         background: linear-gradient(135deg, #238636 0%, #2ea043 100%) !important;
-        color: white !important;
+        color: #ffffff !important;
         border: none !important;
         font-size: 13px !important;
+        font-weight: bold !important;
         box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4) !important;
+    }}
+    .trigger-container button p {{
+        color: #ffffff !important;
+        font-weight: bold !important;
     }}
     
     /* Dinamik Çoklu Hipodrom Bilgi Şeridi (Live Intel Bar) */
@@ -69,8 +74,8 @@ st.markdown(f"""
     .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
     @media (min-width: 600px) {{ .showoff-grid {{ grid-template-columns: 1fr; }} }}
     
-    .reason-box {{ background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color}; }}
-    .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 20px; font-size: 12px; line-height: 1.5; color: {text_color}; }}
+    .reason-box {{ background-color: {card_bg}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color} !important; border-left: 4px solid #1f6feb; }}
+    .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 20px; font-size: 12px; line-height: 1.5; color: {text_color} !important; }}
     
     /* Premium Trading Card / Tahmin Bileti Tasarımı */
     .premium-kupon-card {{
@@ -81,6 +86,12 @@ st.markdown(f"""
         margin-bottom: 20px;
         border-left: 6px solid #1f6feb;
         position: relative;
+        color: {text_color} !important;
+    }}
+    
+    /* 👑 YAZI RENKLERİNİ GECE/GÜNDÜZ TOGGLE'INA %100 SABİTLEYEN HÜCRESEL KALKAN */
+    h1, h2, h3, h4, p, span, th, td, label {{
+        color: {text_color} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -167,7 +178,7 @@ if st.session_state['loaded_date'] != date_str:
             st.session_state['loaded_date'] = date_str
         except: pass
 
-# 📊 3+3 NAVİGASYON PANELİ
+# NAVİGASYON PANELİ
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True): st.session_state['active_menu'] = 'Dashboard'
@@ -196,7 +207,7 @@ if st.session_state['analyzed'] and 'quantum_results' in st.session_state:
     st.markdown('<div class="intel-chip">⏳ KUM PİST DURUMU: STABİL AGGREGATE</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# SAFKAN CORE MOTORU (DİNAMİK SAFKAN MİZANPAJI)
+# SAFKAN CORE MOTORU
 def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -225,8 +236,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     
     for i in range(1, num_races + 1):
         idx = (i * 3) % L
-        # 👑 DİNAMİK AT SAYISI: Her koşuda 4 ile 8 arası at üreten kuantum şebekesi
-        h_count = 4 + (int(digest[idx], 16) % 5) # 4, 5, 6, 7 veya 8 at
+        h_count = 4 + (int(digest[idx], 16) % 5)
         
         raw_nums = [(int(digest[(idx + j) % L], 16) % 14) + 1 for j in range(15)]
         nums = list(dict.fromkeys(raw_nums))[:h_count]
@@ -261,7 +271,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD (👑 %100 KESİNTİSİZ KORUMA + EKSİKSİZ TÜM ATLAR LİSTESİ)
+# SAYFA: DASHBOARD
 if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -276,7 +286,6 @@ if st.session_state['active_menu'] == 'Dashboard':
         </div>
         """, unsafe_allow_html=True)
         
-        # 👑 KULLANICI İSTEĞİ: KOŞULARDAKİ BÜTÜN ATLAR İÇİN AYRI AYRI AGF VE GALOP TABLOLARI
         st.markdown("### 📊 Tüm Koşuların Eksiksiz AGF Dağılım Matrisi")
         agf_rows = []
         for r in res_data:
@@ -298,12 +307,12 @@ if st.session_state['active_menu'] == 'Dashboard':
             <b>📡 SİSTEM BEKLEMEDE ({date_str}):</b><br>
             • Veri havuzunda bu güne ait aktif bülten analizi henüz tetiklenmedi.<br>
             • Aşağıdaki grafik göstergeleri genel tarihsel baseline model performans verilerini simüle etmektedir.<br>
-            • Canlı verileri, AGF ve Galop tablolarını kilitlemek için lütfen <b>Bülten Yükle</b> sekmesine geçip işlem yapın.
+            • Canlı verileri, AGF ve Galop tablolarını kilitlemek için lütfen <b>Bülten Yükle</b> sekmesine geçip bülteni enjekte edin.
         </div>
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 BLOOMBERG TERMINAL GRAPHICS (THEME DYNAMIC CONFIG)
+    # CHART.JS DİYAGRAMLARI (TEMA DUYARLI METİN KONFİGÜRASYONU)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     components.html(f"""
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -316,8 +325,8 @@ if st.session_state['active_menu'] == 'Dashboard':
     </div>
     <script>
     new Chart(document.getElementById('ctxRoi'), {{ type: 'line', data: {{ labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'], datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }} }} }});
-    new Chart(document.getElementById('ctxPist'), {{ type: 'bar', data: {{ labels: ['Çim', 'Kum', 'Sentetik'], datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ max:100, ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }} }} ]}});
-    new Chart(document.getElementById('ctxDonut'), {{ type: 'doughnut', data: {{ labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'], datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ color: '{sub_text}', font:{{size:9}} }} }} }} }} }});
+    new Chart(document.getElementById('ctxPist'), {{ type: 'bar', data: {{ labels: ['Çim', 'Kum', 'Sentetik'], datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ max:100, ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }} }} }});
+    new Chart(document.getElementById('ctxDonut'), {{ type: 'doughnut', data: {{ labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'], datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ color: '{sub_text}', font:{{size:9}} }} }} }} }} }}):
     </script>
     """, height=350)
     
@@ -341,7 +350,12 @@ elif st.session_state['active_menu'] == 'Bülten':
     uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
     pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=120)
     
-    if st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn"):
+    # 👑 KULLANICI İSTEĞİ: TETİKLEME ALANI ÖZEL KORUMA VE OKUNABİLİR BEYAZ METİN HATTI
+    st.markdown('<div class="trigger-container">', unsafe_allow_html=True)
+    triggered = st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    if triggered:
         final_text = ""
         if uploaded_pdf is not None:
             try:
@@ -405,7 +419,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f"腔 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -433,10 +447,10 @@ elif st.session_state['active_menu'] == 'Analiz':
                     """, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# SAYFA: ANALİZ DETAY (👑 %100 MATRİS KOPYASI ŞABLONU + TEMA UYUMLU GRAFİKLER)
+# SAYFA: ANALİZ DETAY (👑 MATRİSİN BİREBİR AYNI ŞABLON KOPYASI)
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
-        st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Gelişmiş Matris Şablonu)")
+        st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Matris Şablon Düzeni)")
         
         det_col1, det_col2 = st.columns(2)
         with det_col1:
@@ -446,7 +460,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Detaylı Gerekçelendirme Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -459,7 +473,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                         </div>
                         """, unsafe_allow_html=True)
                 with col_chart:
-                    st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu ve ahır istihbarat akışı.</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi.<br>• <b>Aerodinamik:</b> Sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat akışı.</p>", unsafe_allow_html=True)
                     components.html(f"""
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     <canvas id="radar-detay-{r['race_no']}" height="140"></canvas>
@@ -483,6 +497,8 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
 elif st.session_state['active_menu'] == 'Tahmin':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         res = st.session_state['quantum_results']
+        n_races = len(res)
+        
         st.markdown("### 💰 Finansal Maliyet Simülatörü")
         unit_price = st.number_input("Birim Ayak Bahis Fiyatı (TL):", value=0.40, step=0.05, min_value=0.01)
         
@@ -546,7 +562,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
-        # 👑 PDF DEVRİMİ: Jilet gibi mizanpaj, tam veri zenginliği ve bölünmez son sayfa
+        # 👑 PDF DEVRİMİ: Sınırsız at içeren madalyalı tablolar ve bölünmez son sayfa
         pdf_html = f"""
         <html>
         <head>
