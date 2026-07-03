@@ -37,16 +37,21 @@ else:
     intel_bg = "#211510"
     intel_border = "#fcd116"
 
-# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU EMBOSSED BUTONLAR VE MOBİL MİKRO TAKVİM KALKANI)
+# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU EMBOSSED BUTONLAR VE TABLO SIKIŞTIRMA KALKANI)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 90px !important; }}
     h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
     h3, h2, h4 {{ color: {text_color} !important; }}
     
-    /* Dashboard Sıkılaştırma ve Boşluk Azaltma Kontrolleri */
+    /* Dashboard Sıkılaştırma ve Tablo Satır Aralıklarını Daraltma Mührü */
     .block-container {{ padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }}
-    div.stTable, div[data-testid=\"stTable\"] {{ margin-bottom: 8px !important; padding: 0 !important; }}
+    div.stTable, div[data-testid="stTable"] {{ margin-bottom: 4px !important; padding: 0 !important; }}
+    div.stTable td, div.stTable th, [data-testid="stTable"] td, [data-testid="stTable"] th {{
+        padding: 4px 6px !important;
+        font-size: 11px !important;
+        line-height: 1.1 !important;
+    }}
     
     /* Tüm Menü Butonları 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
     div.stButton > button {{
@@ -92,9 +97,6 @@ st.markdown(f"""
         border-bottom: 2px solid {border_color} !important;
         box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
     }}
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button:active {{
-        transform: translateY(1px) !important;
-    }}
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) p {{
         font-size: 9px !important;
         margin: 0 !important;
@@ -117,7 +119,7 @@ st.markdown(f"""
         box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4) !important;
     }}
     
-    /* 👑 EXPANDER BAŞLIK VE HOVER OKUNABİLİRLİK KALKANI (KIRMIZI EKRAN HATASI VERMEYEN GÜVENLİ OVERRIDE) */
+    /* Expander Başlık Okunabilirlik Kalkanı */
     .streamlit-expanderHeader, [data-testid="stExpander"] summary, [data-testid="stExpander"] button {{
         background-color: {card_bg} !important;
         border: 1px solid {border_color} !important;
@@ -130,7 +132,6 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
     
-    /* 👑 MOBİL UYUMLU TELEMETRİ KUTUSU */
     .quant-card {{ border: 1px solid {border_color}; padding: 12px; border-radius: 14px; margin-bottom: 15px; background-color: {card_bg}; border-left: 6px solid #1f6feb; box-sizing: border-box; overflow: hidden; }}
     .quant-card p {{ margin: 4px 0; font-size: min(13px, 3.4vw) !important; white-space: normal !important; word-wrap: break-word; overflow: hidden; color: {text_color} !important; }}
     
@@ -141,7 +142,6 @@ st.markdown(f"""
     .showoff-container {{ border: 1px solid {border_color}; padding: 20px; border-radius: 12px; background-color: {card_bg}; margin-top: 15px; }}
     .showoff-title {{ font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 10px; border-bottom: 1px solid {border_color}; padding-bottom: 5px; }}
     .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
-    @media (min-width: 600px) {{ .showoff-grid {{ grid-template-columns: 1fr; }} }}
     
     .reason-box {{ background-color: {card_bg}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color} !important; border-left: 4px solid #1f6feb; box-shadow: 0px 2px 6px rgba(0,0,0,0.2); }}
     .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 15px; font-size: 12px; line-height: 1.5; color: {text_color} !important; }}
@@ -178,7 +178,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# KURUMSAL BAŞLIK DÜZENİ
+# TAM ASİL BAŞLIK DÜZENİ
 st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRIQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
@@ -237,7 +237,7 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (.REPLACE MİZANPAJIYLA KESKİN GÜVENCE)
+# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU
 clock_raw_js = """
 <div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: CARD_BG; padding: 12px; border-radius: 12px; border: 1px solid BORDER_COLOR; color: TEXT_COLOR;">
     <div id="js-date" style="font-size: 12px; color: SUBTEXT_COLOR; font-weight: bold; margin-bottom: 2px;">YÜKLENİYOR...</div>
@@ -269,7 +269,7 @@ setInterval(syncTime, 1000); syncTime();
 clock_final_js = clock_raw_js.replace('CARD_BG', card_bg).replace('BORDER_COLOR', border_color).replace('TEXT_COLOR', text_color).replace('SUBTEXT_COLOR', sub_text).replace('NEXT_RACE_TIME', next_race_time)
 components.html(clock_final_js, height=105)
 
-# MİKRO INTERAKTİF TAKVİM VE MOBİL UYUMLU TELEMETRİ ALANI
+# MİKRO İNLİNE TAKVİM VE MOBİL UYUMLU TELEMETRİ ALANI
 layout_col1, layout_col2 = st.columns([1.1, 1])
 
 with layout_col1:
@@ -343,7 +343,7 @@ with m_row1_col2:
     if st.button("📋 Bülten Yükle", type="primary" if st.session_state['active_menu'] == 'Bülten' else "secondary", use_container_width=True):
         st.session_state['active_menu'] = 'Bülten'
         st.rerun()
-with m_row1_col3:
+with m_row3 := m_row1_col3:
     if st.button("🔬 Analiz Matrisi", type="primary" if st.session_state['active_menu'] == 'Analiz' else "secondary", use_container_width=True):
         st.session_state['active_menu'] = 'Analiz'
         st.rerun()
@@ -428,7 +428,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD
+# SAYFA: DASHBOARD (👑 KULLANICI İSTEĞİ: AGF VE GALOP MATRİSİ COMPACT VE YAN YANA HALE GETİRİLDİ)
 if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -443,19 +443,23 @@ if st.session_state['active_menu'] == 'Dashboard':
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("### 📊 Tüm Koşuların Eksiksiz AGF Dağılım Matrisi")
-        agf_rows = []
-        for r in res_data:
-            for h in r['horses']:
-                agf_rows.append([f"{r['race_no']}. Koşu", f"#{h['num']} {h['name']}", f"%{h['agf']}", f"{h['score']}/100"])
-        st.table(pd.DataFrame(agf_rows, columns=["Koşu", "Safkan", "AGF Dağılim Oranı", "Kuantum Güven Skoru"]))
-        
-        st.markdown("### ⏱️ Tüm Koşuların Eksiksiz Son Galop Dereceleri")
-        galop_rows = []
-        for r in res_data:
-            for h in r['horses']:
-                galop_rows.append([f"{r['race_no']}. Koşu", f"#{h['num']} {h['name']}", h['galop'], f"%{h['syn']} Sinerji"])
-        st.table(pd.DataFrame(galop_rows, columns=["Koşu", "Safkan", "Son 800m - 1000m Galop", "J-A Sinerji Puanı"]))
+        # 👑 SIKIŞTIRILMIŞ YAN YANA TABLO DUZENI 
+        dash_cols = st.columns(2)
+        with dash_cols[0]:
+            st.markdown("### 📊 Eksiksiz AGF Matrisi")
+            agf_rows = []
+            for r in res_data:
+                for h in r['horses']:
+                    agf_rows.append([f"{r['race_no']}.K", f"#{h['num']} {h['name']}", f"%{h['agf']}", f"{h['score']}"])
+            st.table(pd.DataFrame(agf_rows, columns=["Koşu", "Safkan", "AGF", "Skor"]))
+            
+        with dash_cols[1]:
+            st.markdown("### ⏱️ Eksiksiz Galop Matrisi")
+            galop_rows = []
+            for r in res_data:
+                for h in r['horses']:
+                    galop_rows.append([f"{r['race_no']}.K", f"#{h['num']} {h['name']}", h['galop'], f"%{h['syn']} Syn"])
+            st.table(pd.DataFrame(galop_rows, columns=["Koşu", "Safkan", "Galop", "Sinerji"]))
         
         st.success(f"📊 ÖNEMLİ BULUT ARŞİVİ: {date_str} tarihli bülten geçmiş hafızadan başarıyla çağrıldı!")
     else:
@@ -469,7 +473,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 REPLACE MODELİ ÇIKIŞ DİYAGRAMLARI
+    # 👑 %100 KESİNTİSİZ KORUMA ALTINDA OLAN GERÇEKÇİ CHART.JS FINTECH DİYAGRAMLARI (TÜM PARANTEZLER TAMİR EDİLDİ)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     chart_template_js = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -534,7 +538,7 @@ elif st.session_state['active_menu'] == 'Bülten':
     
     st.markdown("""
     <p style="font-size: 13px; font-weight: 500; line-height: 1.6; margin-bottom: 15px;">
-        💡 <b>Enjeksiyon Amacı:</b> Resmi TJK veya yurt dışı sündika bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı biyo-mekanik, aerodinamik ve lobi filtrelerinden geçirmektir. Enjekte edilen veriler anlık olarak yapay zeka modelini besler, AGF/Galop matrislerini oluşturur ve kupon maliyet simülatörünü tetikler.
+        💡 <b>Enjeksiyon Amacı:</b> Resmi TJK veya yurt dışı sündika bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı biyo-mekanik, aerodinamik og lobi filtrelerinden geçirmektir. Enjekte edilen veriler anlık olarak yapay zeka modelini besler, AGF/Galop matrislerini oluşturur ve kupon maliyet simülatörünü tetikler.
     </p>
     """, unsafe_allow_html=True)
     
@@ -635,7 +639,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -666,7 +670,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     components.html(radar_final_js, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# 🔥 SAYFA: ANALİZ DETAY (KULLANICI İSTEĞİ: GRAFİK ÜSTTE REHBERLİ - KARTLAR %100 FOTOĞRAFTAKİ GİBİ FULL-WIDTH ALTA UZANIYOR)
+# SAYFA: ANALİZ DETAY
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Gelişmiş Trading Ticket Düzeni)")
@@ -679,9 +683,8 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 
-                # 👑 ÜST KATMAN: Grafik ve Rehber Yan Yana Ortalı
                 top_c1, top_c2 = st.columns([1, 1.2])
                 with top_c1:
                     st.markdown(f"<p style='font-size:11px; color:{sub_text}; line-height:1.3; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi torku.<br>• <b>Aerodinamik:</b> Sürtünme ve drag direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat network akışı.</p>", unsafe_allow_html=True)
@@ -706,14 +709,13 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                     radar_det_final_js = radar_det_raw_js.replace('CHART_ID', f"radar-detay-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('H2_NUM', str(r['horses'][1]['num'])).replace('H2_BIO', str(r['horses'][1]['bio'])).replace('H2_AERO', str(r['horses'][1]['aero'])).replace('H2_LOBBY', str(r['horses'][1]['lobby'])).replace('SUBTEXT_COLOR', sub_text)
                     components.html(radar_det_final_js, height=130)
                 
-                # 👑 ALT KATMAN: Tıpkı Fotoğraftaki Gibi Sola Sıkışmayan Muazzam Full-Width Gerekçe Kartları
                 for idx, h in enumerate(r['horses']):
                     val_notice = "⚠️ <b>VALUE OPTION TESPİTİ:</b> Bu safkanın Kuantum Alan Skoru piyasa beklentisinin çok üzerindedir.<br>" if h['val'] else ""
                     st.markdown(f"""
                     <div class="reason-box">
                         {val_notice}
                         <b>{h['medal']} #{h['num']} {h['name']} (Sıralama Puanı: {h['score']}/100)</b><br>
-                        Matristeki konumlandırılma ağırlığı %{h['bio']} Biyo-Mekanik kas lifi direnci ve %{h['aero']} Aerodinamik drag vektör ivmesinden beslenmektedir. Ahır lobi ve akıllı para takip sistemimizden gelen %{h['lobby']} güven sinyali ve jokey-antrenör arasındaki %{h['syn']} tarihsel sinerji endeksi safkanın kupon dengelerindeki ana stratejik yerini tam olarak tescil etmektedir.
+                        Matristeki konumlandırılma ağırlığı %{h['bio']} Biyo-Mekanik kas lifi direnci ve %{h['aero']} Aerodinamik drag vektör ivmesinden beslenmektedir. Ahır lobi og akıllı para takip sistemimizden gelen %{h['lobby']} güven sinyali ve jokey-antrenör arasındaki %{h['syn']} tarihsel sinerji endeksi safkanın kupon dengelerindeki ana stratejik yerini tam olarak tescil etmektedir.
                     </div>
                     """, unsafe_allow_html=True)
     else: st.info("💡 Gerekçeli detayları görebilmek için önce 'Bülten Yükle' alanından veri yüklemelisiniz.")
@@ -874,5 +876,5 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
 
-# 👑 GLOBAL PREMIUM FOOTER HARİTASI
+# SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
