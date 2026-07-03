@@ -9,7 +9,7 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="METRIQX v9.0", page_icon="🏇", layout="centered")
+st.set_page_config(page_title="METRIQX v9.2", page_icon="🏇", layout="centered")
 
 # 🌓 GÜNDÜZ/GECE MODU SEÇİCİSİ
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
@@ -30,7 +30,7 @@ else:
     accent_color = "#1f6feb"
     sub_text = "#8b949e"
 
-# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ
+# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (TÜM KÜME PARANTEZLERİ KAT KAT KORUMAYA ALINDI)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {bg_color}; color: {text_color}; }}
@@ -42,7 +42,7 @@ st.markdown(f"""
     .stButton>button[data-testid="stBaseButton-secondary"] {{ background-color: {card_bg} !important; color: {sub_text} !important; border: 1px solid {border_color} !important; }}
     .stButton>button[data-testid="stBaseButton-primary"] {{ background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important; color: white !important; border: none !important; box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3); }}
     
-    /* 🚀 ANALİZİ TETİKLE BUTONUNA ÖZEL NEON FINTECH YEŞİLİ TONU MÜHÜRLENDİ */
+    /* 🔥 ANALİZİ TETİKLE BUTONUNA ÖZEL PARLAYAN NEON FİNTECH YEŞİLİ MÜHÜR */
     div[data-testid="stBlock"] button[key="trigger_btn"] {{
         background: linear-gradient(135deg, #238636 0%, #2ea043 100%) !important;
         color: white !important;
@@ -64,7 +64,7 @@ st.markdown(f"""
     .reason-box {{ background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color}; }}
     .intel-box {{ border: 1px solid #bf4b21; padding: 15px; border-radius: 10px; background-color: #211510; border-left: 5px solid #bf4b21; margin-bottom: 20px; font-size: 12px; line-height: 1.5; }}
     
-    /* Tahmin Kartları Premium Görsel Tasarımı */
+    /* Tahmin Kartları Premium Görsel Mizanpajı */
     .premium-kupon-card {{
         border: 1px solid {border_color};
         background: linear-gradient(145deg, {card_bg} 0%, {bg_color} 100%);
@@ -75,9 +75,6 @@ st.markdown(f"""
     }}
     </style>
     """, unsafe_allow_html=True)
-
-# ANA BAŞLIK
-st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v9.0")
 
 # JAVASCRIPT CANLI SAAT VE OPERASYONEL GERİ SAYIM SAYACI
 import streamlit.components.v1 as components
@@ -107,7 +104,6 @@ setInterval(syncTime, 1000); syncTime();
 
 API_URL = st.secrets.get("API_URL", "")
 
-# Takvim Girişi
 st.markdown("### 📅 Operasyon Günü Seçimi")
 selected_date = st.date_input("İncelemek veya yüklemek istediğiniz işlem tarihini seçin:", value=pd.Timestamp.now().date())
 date_str = selected_date.strftime("%Y-%m-%d")
@@ -167,7 +163,7 @@ with m_row2_col3:
 
 st.write("---")
 
-# ÇEKİRDEK KESAPLAMA MOTORU (DİNAMİK NESTED DICTIONARY ALTYAPISI)
+# SAFKAN MOTORU
 def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -216,7 +212,6 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
             base_idx = (i - 1) * 4
             h_name = names[(base_idx + rank + seed_offset) % len(names)]
             
-            # Dinamik katsayı hesaplama ve yapay zeka bias ekleme adımı
             b_score = round((92 - rank*8 + (h_num%4)) * (w_bio/100.0) + bias["bio"], 1)
             a_score = round((95 - rank*9 - (h_num%3)) * (w_aero/100.0) + bias["aero"], 1)
             l_score = round((91 - rank*7 + (h_num%5)) * (w_lobby/100.0) + bias["lobby"], 1)
@@ -236,13 +231,13 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD
+# SAYFA: DASHBOARD (👑 KESİNTİSİZ KORUMA: GRAFİKLER HER DURUMDA AKTİF!)
 if st.session_state['active_menu'] == 'Dashboard':
     if st.session_state['analyzed']:
-        st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
+        # Canlı İstihbarat Notları
         res_data = st.session_state['quantum_results']
         val_count = sum([1 for r in res_data if r['horses'][0]['val']])
-        
+        st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
         st.markdown(f"""
         <div class="intel-box">
             <b>📡 METRIQX SAHA İSTİHBARAT NOTLARI ({date_str}):</b><br>
@@ -252,28 +247,36 @@ if st.session_state['active_menu'] == 'Dashboard':
         </div>
         """, unsafe_allow_html=True)
         st.success(f"📊 ÖNEMLİ BULUT ARŞİVİ: {date_str} tarihli bülten geçmiş hafızadan başarıyla çağrıldı!")
-        
-        # Grafik Şovları
-        st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
-        scores_js = [r['horses'][0]['score'] for r in res_data]
-        races_js = [f"{r['race_no']}.K" for r in res_data]
-        
-        components.html(f"""
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:12px;">📈 ROI & Kasa Büyüme Trend İvmesi</h5><canvas id="ctxRoi" height="60"></canvas></div>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;"><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🏟️ Pist Türü Başarı Endeksi</h5><canvas id="ctxPist" height="110"></canvas></div>
-                <div style="flex: 1;"><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🍩 Kupon Şablon İsabet Dağılımı</h5><canvas id="ctxDonut" height="110"></canvas></div>
-            </div>
+    else:
+        # Bülten yüklenmemişse gösterilecek Kılavuz İstihbarat Notu
+        st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
+        st.markdown(f"""
+        <div class="intel-box" style="border-left-color: #58a6ff; background-color: #1c2128;">
+            <b>📡 SİSTEM BEKLEMEDE ({date_str}):</b><br>
+            • Veri havuzunda bu güne ait aktif bülten analizi henüz tetiklenmedi.<br>
+            • Aşağıdaki grafik göstergeleri genel tarihsel baseline model performans verilerini simüle etmektedir.<br>
+            • Canlı istihbarat notlarını ve kupon maliyetlerini kilitlemek için lütfen <b>Bülten</b> sekmesine geçip yükleme yapın.
         </div>
-        <script>
-        new Chart(document.getElementById('ctxRoi'), {{ type: 'line', data: {{ labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'], datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ ticks: {{ color: '#8b949e' }} }}, x: {{ ticks: {{ color: '#8b949e' }} }} }} }} }});
-        new Chart(document.getElementById('ctxPist'), {{ type: 'bar', data: {{ labels: ['Çim', 'Kum', 'Sentetik'], datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ max:100, ticks: {{ color: '#8b949e' }} }}, x: {{ ticks: {{ color: '#8b949e' }} }} }} }} }});
-        new Chart(document.getElementById('ctxDonut'), {{ type: 'doughnut', data: {{ labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'], datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ color: '#8b949e', font:{{size:9}} }} }} }} }} }});
-        </script>
-        """, height=350)
-    else: st.info(f"💡 {date_str} tarihine ait bülten bulunamadı. Bülten sekmesine geçin.")
+        """, unsafe_allow_html=True)
+        st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten sekmesinden yükleme yapabilirsiniz.")
+        
+    # 👑 BURASI ASLA SİLİNMEZ: Grafikler Her İki Durumda da Ekranı Bloomberg Terminaline Çevirir
+    st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
+    components.html(f"""
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:12px;">📈 ROI & Kasa Büyüme Trend İvmesi</h5><canvas id="ctxRoi" height="60"></canvas></div>
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;"><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🏟️ Pist Türü Başarı Endeksi</h5><canvas id="ctxPist" height="110"></canvas></div>
+            <div style="flex: 1;"><h5 style="color:#8b949e; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🍩 Kupon Şablon İsabet Dağılımı</h5><canvas id="ctxDonut" height="110"></canvas></div>
+        </div>
+    </div>
+    <script>
+    new Chart(document.getElementById('ctxRoi'), {{ type: 'line', data: {{ labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'], datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ ticks: {{ color: '#8b949e' }} }}, x: {{ ticks: {{ color: '#8b949e' }} }} }} }} }});
+    new Chart(document.getElementById('ctxPist'), {{ type: 'bar', data: {{ labels: ['Çim', 'Kum', 'Sentetik'], datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ max:100, ticks: {{ color: '#8b949e' }} }}, x: {{ ticks: {{ color: '#8b949e' }} }} }} }} }});
+    new Chart(document.getElementById('ctxDonut'), {{ type: 'doughnut', data: {{ labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'], datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ color: '#8b949e', font:{{size:9}} }} }} }} }} }});
+    </script>
+    """, height=350)
     
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
@@ -283,7 +286,7 @@ if st.session_state['active_menu'] == 'Dashboard':
     with col_b:
         st.markdown("""<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER (10/10)</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div><div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div><div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div><div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div><div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div></div></div><div class="showoff-container"><div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ (10/10)</div><div class="showoff-grid"><div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div><div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div><div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div><div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div><div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div></div></div>""", unsafe_allow_html=True)
 
-# SAYFA: BÜLTEN (REKLİ TETİKLEME BUTONU VE CANLI LOG AKIŞI GERİ GETİRİLDİ)
+# SAYFA: BÜLTEN
 elif st.session_state['active_menu'] == 'Bülten':
     st.subheader(f"📋 {date_str} Günü İçin Bülten Enjeksiyonu")
     with st.expander("🎛️ Gelişmiş Kuantum Katsayı Ağırlıkları (Dinamik ML Kontrolü)", expanded=True):
@@ -295,7 +298,6 @@ elif st.session_state['active_menu'] == 'Bülten':
     uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
     pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=120)
     
-    # NEON YEŞİL KORUMALI BUTON TETİKLEMESİ
     if st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn"):
         final_text = ""
         if uploaded_pdf is not None:
@@ -316,7 +318,6 @@ elif st.session_state['active_menu'] == 'Bülten':
                     target_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
                 else: target_date = cleaned_d
             
-            # 🔥 SİLİNEN 4 AŞAMALI CANLI DOĞRULAMA BAR LOG AKIŞI YENİDEN KİLİTLENDİ
             status_text = st.empty()
             progress_bar = st.progress(0)
             stages = [
@@ -347,12 +348,11 @@ elif st.session_state['active_menu'] == 'Bülten':
                 except: pass
             st.success(f"✅ ANALİZ TAMAMLANDI! Veriler Bulut Hafızasına Kilitlendi.")
 
-# SAYFA: ANALİZ MATRİSİ (EXPAND/COLLAPSE DİNAMİK TUŞU VE ANLAMLANDIRILMIŞ GRAFİK EKSEN REHBERİ)
+# SAYFA: ANALİZ MATRİSİ
 elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed']:
         st.subheader(f"🔬 {date_str} Tarihli 40 Kriter Analiz Dağılımları")
         
-        # 👑 AKILLI EXPAND & COLLAPSE TEK DOKUNUŞ BAR PANELİ
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:
             if st.button("🔓 Tüm Koşuların Detayını Aç", use_container_width=True): st.session_state['expand_matrix'] = True
@@ -361,20 +361,18 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f"%🏇 KOŞU {r['race_no']} - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
-                    # Rakam kısıtlaması kaldırıldı, tüm şanslı safkanlar dinamik olarak listeleniyor
                     for h in r['horses']:
                         v_marker = " 👑 [VALUE]" if h['val'] else ""
                         st.markdown(f"**{h['medal']} #{h['num']} {h['name']} (Skor: {h['score']}){v_marker}**\n* 🧬 Biyo: %{h['bio']} | 🌪️ Aero: %{h['aero']} | 🕸️ Lobi: %{h['lobby']} | 🤝 Sinerji: %{h['syn']}")
                 
                 with col_chart:
-                    # Grafiğin ne anlama geldiğini gösteren kurumsal eksen rehber dökümü
-                    st.markdown("<p style='font-size:10px; color:#8b949e; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Safkanın kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu ve ahır istihbarat akışı.</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:10px; color:#8b949e; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu ve ahır istihbarat akışı.</p>", unsafe_allow_html=True)
                     components.html(f"""
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                    <canvas id="radar-{r['race_no']}" height="130"></canvas>
+                    <canvas id="radar-{r['race_no']}" height="140"></canvas>
                     <script>
                     new Chart(document.getElementById('radar-{r['race_no']}'), {{
                         type: 'radar',
@@ -391,7 +389,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     """, height=155)
     else: st.info("💡 Lütfen önce 'Bülten' sekmesinden yükleme yapın.")
 
-# SAYFA: ANALİZ DETAY (KISİTLAMALAR KALDIRILDI - %100 DİNAMİK AT DÖNGÜSÜ ENTEGREGRE EDİLDİ)
+# SAYFA: ANALİZ DETAY
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri")
@@ -404,7 +402,6 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             with st.expander(f"🏇 KOŞU {r['race_no']} Detaylı Gerekçelendirme Raporu", expanded=st.session_state['expand_detay']):
-                # 4 atın tamamı veya bültenden gelen tüm şanslı atlar kısıtlanmadan dinamik bükülüyor
                 for idx, h in enumerate(r['horses']):
                     val_notice = "⚠️ <b>KRİTİK FİNANSAL ARBİTRAJ / VALUE OPPORTUNITY TESPİTİ:</b> Bu safkanın Kuantum Alan Skoru, piyasa beklentisinin (AGF) çok üzerindedir.<br>" if h['val'] else ""
                     st.markdown(f"""
@@ -416,10 +413,12 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                     """, unsafe_allow_html=True)
     else: st.info("💡 Gerekçeli detayları görebilmek için önce 'Bülten' alanından veri yüklemelisiniz.")
 
-# SAYFA: TAHMİN (DÜZ METİN GÖRÜNÜMÜ TAMAMEN SİLİNDİ - ULTRALÜKS KART MİZANPAJI KURULDU)
+# SAYFA: TAHMİN
 elif st.session_state['active_menu'] == 'Tahmin':
     if st.session_state['analyzed']:
         res = st.session_state['quantum_results']
+        n_races = len(res)
+        
         st.markdown("### 💰 Finansal Maliyet Simülatörü")
         unit_price = st.number_input("Birim Ayak Bahis Fiyatı (TL):", value=0.40, step=0.05, min_value=0.01)
         
@@ -465,7 +464,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": c4 * unit_price
         }
         
-        # Düz metin kod görünümü lüks fintech kart mizanpajına çevrildi
         for title, lines in kuponlar.items():
             st.markdown(f"""
             <div class="premium-kupon-card">
@@ -479,7 +477,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
-        # 👑 PDF DEVRİMİ: Jilet gibi mizanpaj, tam veri zenginliği ve bölünmez son sayfa
         pdf_html = f"""
         <html>
         <head>
@@ -488,7 +485,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             @page {{
                 size: A4; margin: 20mm 12mm; background-color: #fafbfc;
                 @bottom-right {{ content: "Sayfa " counter(page) " / " counter(pages); font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; }}
-                @bottom-left {{ content: "METRIQX EXECUTIVE REPORT v9.0"; font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; font-weight: bold; }}
+                @bottom-left {{ content: "METRIQX EXECUTIVE REPORT v9.2"; font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; font-weight: bold; }}
             }}
             body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
             .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
@@ -497,7 +494,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
             .race-header {{ font-size: 11pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-            th, td {{ border: 1px solid #d0d7de; padding: 7px; font-size: 8.5pt; text-align: left; }}
+            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 8.5pt; text-align: left; }}
             th {{ background-color: #f6f8fa; font-weight: bold; }}
             .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
             .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #1f6feb; font-size:10.5pt; line-height:1.6; page-break-inside: avoid; }}
