@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components  # 👑 KÖKTEN TEMİZLENEN CRITICAL IMPORT
 import pandas as pd
 import time
 import hashlib
@@ -162,7 +163,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 👑 KULLANICI İSTEĞİ: YENİLENEN TAM DOĞRU KURUMSAL BAŞLIK DÜZENİ
+# KURUMSAL BAŞLIK DÜZENİ
 st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRIQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
@@ -221,7 +222,7 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# 👑 KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (REPLACE METODLU KESİN ÇÖZÜM)
+# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (.REPLACE MİZANPAJIYLA KESKİN GÜVENCE)
 clock_raw_js = """
 <div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: CARD_BG; padding: 12px; border-radius: 12px; border: 1px solid BORDER_COLOR; color: TEXT_COLOR;">
     <div id="js-date" style="font-size: 12px; color: SUBTEXT_COLOR; font-weight: bold; margin-bottom: 2px;">YÜKLENİYOR...</div>
@@ -305,7 +306,7 @@ with layout_col2:
     else:
         hipo_val, hava_val, kum_val, cim_val = "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳"
         
-    # 👑 KULLANICI İSTEĞİ: YAZILARI BÜYÜTÜLEN VE MOBİL DIŞINA TAŞMASI ENGELLENEN FLUID KART
+    # 👑 KULLANICI İSTEĞİ: TELEMETRİ KUTUSU KARENİN DIŞINA TAŞMAYACAK VE YAZILAR OKUNACAK
     st.markdown(f"""
     <div class="quant-card" style="margin-top:5px; height:152px; padding:12px; box-sizing: border-box; overflow: hidden;">
         <h5 style="margin-top:0; color:{accent_color}; font-size: min(13px, 3.5vw); font-family:monospace; margin-bottom: 6px; white-space: nowrap; text-overflow: ellipsis;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
@@ -318,7 +319,7 @@ with layout_col2:
 
 st.write("---")
 
-# 📊 3+3 NAVİGASYON PANELİ
+# 📊 3+3 NAVİGASYON PANELİ (TEK TIKLAMA AKIŞI ST.RERUN KİLİTLİDİR)
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True):
@@ -464,7 +465,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 %100 KURŞUN GEÇİRMEZ CHART INJECTION (REPLACE SİSTEMLİ - NAME ERROR EBEDİYEN İMHA EDİLDİ)
+    # 👑 KORUMALI REPLACE MODELİ (SÜSLÜ PARANTEZ ÇAKIŞMALARINA KARŞI MUTLAK GÜVENCE)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     chart_template_js = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -590,11 +591,11 @@ elif st.session_state['active_menu'] == 'Bülten':
             st.success(f"✅ ANALİZ TAMAMLANDI! Veriler Bulut Hafızasına Kilitlendi.")
             st.rerun()
 
-    # 👑 KULLANICI İSTEĞİ: SEÇİLEN TAKVİM GÜNÜNDE BÜLTEN VARSA EN ALTTA MATRİS ÖZETİNİ GÖSTERME KORUMASI
+    # 👑 KULLANICI İSTEĞİ: SEÇİLEN TAKVİM GÜNÜNDE BÜLTEN VARSA EN ALTTA MATRİS ÖZETİNİ GÖSTERME ALANI
     st.write("---")
     st.markdown("### 🗂️ Bu Tarihe Ait Mevcut Yüklü Bülten Verileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
-        st.info(f"✅ Hafıza Dolu: {date_str} tarihine ait bülten matrisi zaten bulutta yüklü durumda. Analiz Matrisi veya Tahmin sekmelerine geçerek tüm kuponları okuyabilirsiniz.")
+        st.info(f"✅ Hafıza Dolu: {date_str} tarihine ait bülten matrisi zaten bulutta yüklü durumda.")
         st.markdown(f"**Yüklü Koşu Sayısı:** {len(st.session_state['quantum_results'])} Koşu Dağılımı Aktif")
     else:
         st.warning(f"❌ {date_str} tarihine ait herhangi bir yüklü bülten matrisi bulunmuyor. Lütfen yukarıdan bülten enjeksiyonu yapın.")
@@ -620,9 +621,8 @@ elif st.session_state['active_menu'] == 'Analiz':
                         st.markdown(f"**{h['medal']} #{h['num']} {h['name']} (Skor: {h['score']}){v_marker}**\n* 🧬 Biyo: %{h['bio']} | 🌪️ Aero: %{h['aero']} | 🕸️ Lobi: %{h['lobby']} | 🤝 Sinerji: %{h['syn']}")
                 
                 with col_chart:
-                    st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu ve ahır istihbarat akışı.</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu.</p>", unsafe_allow_html=True)
                     
-                    # f-string Name Error Kalkanı
                     radar_raw_js = """
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     <canvas id="CHART_ID" height="140"></canvas>
@@ -657,7 +657,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -672,7 +672,6 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                 with col_chart:
                     st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi.<br>• <b>Aerodinamik:</b> Sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat akışı.</p>", unsafe_allow_html=True)
                     
-                    # f-string Name Error Kalkanı Detay Alanı
                     radar_det_raw_js = """
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     <canvas id="CHART_ID" height="140"></canvas>
@@ -763,7 +762,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
-        # PDF ÇIKTISI
         pdf_html = f"""
         <html>
         <head>
@@ -795,7 +793,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
         for r in res:
             pdf_html += f"""
             <div class="container">
-                <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılım Raporu</div>
+                <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılim Raporu</div>
                 <table>
                     <thead>
                         <tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th><th>🤝 Sinerji</th></tr>
@@ -851,5 +849,5 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
 
-# 👑 KULLANICI İSTEĞİ: TAB SEÇİMLERİNDEN BAĞIMSIZ EN ALTTA KİLİTLİ DURAN GLOBAL PREMIUM FOOTER
+# 👑 GLOBAL KİLİTLİ PREMIUM FOOTER - TÜM SAYFALARDA ÇAKILI
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
