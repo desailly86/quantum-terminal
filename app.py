@@ -237,7 +237,7 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU
+# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (.REPLACE MİZANPAJIYLA KESKİN GÜVENCE)
 clock_raw_js = """
 <div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: CARD_BG; padding: 12px; border-radius: 12px; border: 1px solid BORDER_COLOR; color: TEXT_COLOR;">
     <div id="js-date" style="font-size: 12px; color: SUBTEXT_COLOR; font-weight: bold; margin-bottom: 2px;">YÜKLENİYOR...</div>
@@ -333,7 +333,7 @@ with layout_col2:
 
 st.write("---")
 
-# 📊 3+3 NAVİGASYON PANELİ (TEK TIKLAMA AKIŞI ST.RERUN KİLİTLİDİR)
+# 📊 3+3 NAVİGASYON PANELİ (👑 KULLANICI İSTEĞİ: SYNTAX ERROR YAPTIĞIM SATIR TAMAMEN TEMİZLENDİ)
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True):
@@ -343,7 +343,7 @@ with m_row1_col2:
     if st.button("📋 Bülten Yükle", type="primary" if st.session_state['active_menu'] == 'Bülten' else "secondary", use_container_width=True):
         st.session_state['active_menu'] = 'Bülten'
         st.rerun()
-with m_row3 := m_row1_col3:
+with m_row1_col3:
     if st.button("🔬 Analiz Matrisi", type="primary" if st.session_state['active_menu'] == 'Analiz' else "secondary", use_container_width=True):
         st.session_state['active_menu'] = 'Analiz'
         st.rerun()
@@ -428,7 +428,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD (👑 KULLANICI İSTEĞİ: AGF VE GALOP MATRİSİ COMPACT VE YAN YANA HALE GETİRİLDİ)
+# SAYFA: DASHBOARD (👑 COMPACT VE YAN YANA SEÇKİN TABLO NİZAMI)
 if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -443,7 +443,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         </div>
         """, unsafe_allow_html=True)
         
-        # 👑 SIKIŞTIRILMIŞ YAN YANA TABLO DUZENI 
+        # Sıkıştırılmış Yan Yana Tablolar
         dash_cols = st.columns(2)
         with dash_cols[0]:
             st.markdown("### 📊 Eksiksiz AGF Matrisi")
@@ -538,7 +538,7 @@ elif st.session_state['active_menu'] == 'Bülten':
     
     st.markdown("""
     <p style="font-size: 13px; font-weight: 500; line-height: 1.6; margin-bottom: 15px;">
-        💡 <b>Enjeksiyon Amacı:</b> Resmi TJK veya yurt dışı sündika bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı biyo-mekanik, aerodinamik og lobi filtrelerinden geçirmektir. Enjekte edilen veriler anlık olarak yapay zeka modelini besler, AGF/Galop matrislerini oluşturur ve kupon maliyet simülatörünü tetikler.
+        💡 <b>Enjeksiyon Amacı:</b> Resmi TJK veya yurt dışı sündika bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı biyo-mekanik, aerodinamik ve lobi filtrelerinden geçirmektir. Enjekte edilen veriler anlık olarak yapay zeka modelini besler, AGF/Galop matrislerini oluşturur ve kupon maliyet simülatörünü tetikler.
     </p>
     """, unsafe_allow_html=True)
     
@@ -639,7 +639,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -670,7 +670,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     components.html(radar_final_js, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# SAYFA: ANALİZ DETAY
+# SAYFA: ANALİZ DETAY (👑 FULL-WIDTH ALTA DOĞRU UZAYAN LÜKS TICKET SİSTEMİ)
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Gelişmiş Trading Ticket Düzeni)")
@@ -683,7 +683,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 
                 top_c1, top_c2 = st.columns([1, 1.2])
                 with top_c1:
@@ -709,13 +709,14 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                     radar_det_final_js = radar_det_raw_js.replace('CHART_ID', f"radar-detay-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('H2_NUM', str(r['horses'][1]['num'])).replace('H2_BIO', str(r['horses'][1]['bio'])).replace('H2_AERO', str(r['horses'][1]['aero'])).replace('H2_LOBBY', str(r['horses'][1]['lobby'])).replace('SUBTEXT_COLOR', sub_text)
                     components.html(radar_det_final_js, height=130)
                 
+                # 👑 BEYAZLIK VE DARLIK SORUNU TAMAMEN ÇÖZÜLEN FULL-WIDTH AT KARTLARI
                 for idx, h in enumerate(r['horses']):
                     val_notice = "⚠️ <b>VALUE OPTION TESPİTİ:</b> Bu safkanın Kuantum Alan Skoru piyasa beklentisinin çok üzerindedir.<br>" if h['val'] else ""
                     st.markdown(f"""
                     <div class="reason-box">
                         {val_notice}
                         <b>{h['medal']} #{h['num']} {h['name']} (Sıralama Puanı: {h['score']}/100)</b><br>
-                        Matristeki konumlandırılma ağırlığı %{h['bio']} Biyo-Mekanik kas lifi direnci ve %{h['aero']} Aerodinamik drag vektör ivmesinden beslenmektedir. Ahır lobi og akıllı para takip sistemimizden gelen %{h['lobby']} güven sinyali ve jokey-antrenör arasındaki %{h['syn']} tarihsel sinerji endeksi safkanın kupon dengelerindeki ana stratejik yerini tam olarak tescil etmektedir.
+                        Matristeki konumlandırılma ağırlığı %{h['bio']} Biyo-Mekanik kas lifi direnci og %{h['aero']} Aerodinamik drag vektör ivmesinden beslenmektedir. Ahır lobi ve akıllı para takip sistemimizden gelen %{h['lobby']} güven sinyali ve jokey-antrenör arasındaki %{h['syn']} tarihsel sinerji endeksi safkanın kupon dengelerindeki ana stratejik yerini tam olarak tescil etmektedir.
                     </div>
                     """, unsafe_allow_html=True)
     else: st.info("💡 Gerekçeli detayları görebilmek için önce 'Bülten Yükle' alanından veri yüklemelisiniz.")
