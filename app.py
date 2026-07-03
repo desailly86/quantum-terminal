@@ -33,7 +33,7 @@ menu = st.tabs(["📋 Bülten Yükleme", "🔬 Canlı Analiz Matrisi", "🎟️ 
 
 API_URL = st.secrets.get("API_URL", "")
 
-# DİNAMİK HESAPLAMA ÇEKİRDEĞİ
+# DİNAMİK KUANTUM HESAPLAMA ÇEKİRDEĞİ (SONSUZ DÖNGÜ KALKANI ENTEGRELİ)
 def run_quantum_core(text_input):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -47,10 +47,18 @@ def run_quantum_core(text_input):
         h3 = ((int(digest[idx+2], 16) + 2) % 14) + 1
         h4 = ((int(digest[idx], 16) + 9) % 14) + 1
         
-        nums = list(set([h1, h2, h3, h4]))
+        # Sıralı ve benzersiz numara toplama mekanizması
+        nums = []
+        for h in [h1, h2, h3, h4]:
+            if h not in nums:
+                nums.append(h)
+                
+        # Eğer 4 benzersiz at çıkmadıysa, eksikleri sonsuz döngüye girmeden sırayla tamamla
+        candidate = 1
         while len(nums) < 4:
-            nums.append((len(nums) + 7) % 14 + 1)
-            nums = list(set(nums))
+            if candidate not in nums:
+                nums.append(candidate)
+            candidate += 1
             
         races.append({
             "race_no": i,
@@ -120,7 +128,7 @@ with menu[1]:
     else:
         st.info("💡 Lütfen ilk sekmeden PDF veya metin bülteninizi yükleyin.")
 
-# SEKME 3: HAZIR KOMBİNASYONLAR VE ULTRALÜKS PDF
+# SEKME 3: HAZIR KOMBİNASYONLAR VE ULTRALÜKS PDF RAPOR ÇIKTISI
 with menu[2]:
     if 'analyzed' in st.session_state:
         res = st.session_state['quantum_results']
@@ -166,21 +174,29 @@ with menu[2]:
             </div>
             """
             
+        # KUPONLARIN SON SAYFADA BÖLÜNMEDEN KALMASINI SAĞLAYAN SİHİRLİ ÖZEL ALAN
         pdf_html += f"""
             <h2 class="page-break">🎟️ 3 Kademeli Sündika Otomasyonu Hazır Kombinasyonları (Son Sayfa Korumalı)</h2>
             <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#1f6feb;">📈 1. DENGELİ SÜNDİKA ŞABLONU (Geniş Varyans)</div>
             <div class="kupon-box">
-                1. AYAK: {res[0]['h1']}, {res[0]['h2']}, {res[0]['h3']}<br>2. AYAK: {res[1]['h1']}, {res[1]['h2']}<br>3. AYAK: {res[2]['h1']} (TEK)
+                1. AYAK: {res[0]['h1']}, {res[0]['h2']}, {res[0]['h3']}<br>
+                2. AYAK: {res[1]['h1']}, {res[1]['h2']}<br>
+                3. AYAK: {res[2]['h1']} (TEK)<br>
+                4. AYAK: {res[3]['h1']}, {res[3]['h2']}<br>
+                5. AYAK: {res[4]['h1']} (TEK)<br>
+                6. AYAK: {res[5]['h1']}, {res[5]['h2']}
             </div>
             
             <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#e3a008;">⚡ 2. ORTA DÜZEY RİSK ŞABLONU</div>
             <div class="kupon-box" style="border-left: 4px solid #e3a008;">
-                1. AYAK: {res[0]['h1']}, {res[0]['h2']}<br>2. AYAK: {res[1]['h1']}<br>3. AYAK: {res[2]['h1']} (TEK)
+                1. AYAK: {res[0]['h1']}, {res[0]['h2']}<br>2. AYAK: {res[1]['h1']}<br>3. AYAK: {res[2]['h1']} (TEK)<br>
+                4. AYAK: {res[3]['h1']}, {res[3]['h2']}<br>5. AYAK: {res[4]['h1']} (TEK)<br>6. AYAK: {res[5]['h1']}
             </div>
 
             <div style="font-size:10pt; font-weight:bold; margin-bottom:5px; color:#238636;">💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU</div>
             <div class="kupon-box" style="border-left: 4px solid #238636;">
-                1. AYAK: {res[0]['h1']} (TEK)<br>2. AYAK: {res[1]['h1']} (TEK)<br>3. AYAK: {res[2]['h1']} (TEK)
+                1. AYAK: {res[0]['h1']} (TEK)<br>2. AYAK: {res[1]['h1']} (TEK)<br>3. AYAK: {res[2]['h1']} (TEK)<br>
+                4. AYAK: {res[3]['h1']} (TEK)<br>5. AYAK: {res[4]['h1']} (TEK)<br>6. AYAK: {res[5]['h1']} (TEK)
             </div>
         </body>
         </html>
@@ -194,7 +210,7 @@ with menu[2]:
 
 # SEKME 4: OTONOM OTOPSİ (COPY-PASTE ENJEKSİYON)
 with menu[3]:
-    st.subheader("🛡️ Toplu Gün Sonu Sonuç Enjeksiyonu")
+    st.subheader("🛡️ Toplu Gün Sonu Sonük Enjeksiyonu")
     st.caption("Yarış bittikten sonra resmi sonuçlar tablosunu direkt kopyalayıp aşağıdaki kutuya yapıştırın:")
     bulk_data = st.text_area("Gün sonu tüm sıralama ve sonuç metnini buraya yapıştırın:", height=180)
     
