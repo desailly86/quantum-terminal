@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components  # 👑 KÖKTEN TEMİZLENEN CRITICAL IMPORT
+import streamlit.components.v1 as components
 import pandas as pd
 import time
 import hashlib
@@ -44,7 +44,7 @@ st.markdown(f"""
     h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
     h3, h2, h4 {{ color: {text_color} !important; }}
     
-    /* Tüm Butonlar 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
+    /* Tüm Menü Butonları 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
     div.stButton > button {{
         width: 100%;
         border-radius: 10px !important;
@@ -109,11 +109,19 @@ st.markdown(f"""
         box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4) !important;
     }}
     
+    /* Expander Başlık Okunabilirlik Kalkanı */
+    div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span, div[data-testid="stExpander"] summary div {{
+        color: {text_color} !important;
+        font-weight: bold !important;
+    }}
+    
     /* Dinamik Çoklu Hipodrom Bilgi Şeridi (Live Intel Bar) */
     .intel-bar-container {{ display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }}
     .intel-chip {{ background: {card_bg}; border: 1px solid {border_color}; padding: 8px 15px; border-radius: 20px; white-space: nowrap; font-size: 11px; color: #58a6ff; font-weight: bold; border-left: 4px solid #1f6feb; }}
     
-    .quant-card {{ border: 1px solid {border_color}; padding: 22px; border-radius: 14px; margin-bottom: 25px; background-color: {card_bg}; border-left: 6px solid #1f6feb; }}
+    .quant-card {{ border: 1px solid {border_color}; padding: 15px; border-radius: 14px; margin-bottom: 25px; background-color: {card_bg}; border-left: 6px solid #1f6feb; box-sizing: border-box; overflow: hidden; }}
+    .quant-card p {{ margin: 4px 0; font-size: min(13px, 3.4vw); white-space: normal !important; word-wrap: break-word; overflow: hidden; color: {text_color} !important; }}
+    
     .telemetry-badge {{ background-color: {card_bg}; border: 1px solid {border_color}; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }}
     .metric-sub-line {{ font-size: 12px; color: {sub_text}; margin-left: 15px; font-family: monospace; margin-bottom: 5px; }}
     
@@ -163,7 +171,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# KURUMSAL BAŞLIK DÜZENİ
+# TAM ASİL BAŞLIK DÜZENİ
 st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRIQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
@@ -310,10 +318,10 @@ with layout_col2:
     st.markdown(f"""
     <div class="quant-card" style="margin-top:5px; height:152px; padding:12px; box-sizing: border-box; overflow: hidden;">
         <h5 style="margin-top:0; color:{accent_color}; font-size: min(13px, 3.5vw); font-family:monospace; margin-bottom: 6px; white-space: nowrap; text-overflow: ellipsis;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
-        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">📍 <b>Hipodrom:</b> {hipo_val}</p>
-        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">☁️ <b>Hava Durumu:</b> {hava_val}</p>
-        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">⏳ <b>Kum Ölçümü:</b> {kum_val}</p>
-        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">🏟️ <b>Çim Ölçümü:</b> {cim_val}</p>
+        <p>📍 <b>Hipodrom:</b> {hipo_val}</p>
+        <p>☁️ <b>Hava Durumu:</b> {hava_val}</p>
+        <p>⏳ <b>Kum Ölçümü:</b> {kum_val}</p>
+        <p>🏟️ <b>Çim Ölçümü:</b> {cim_val}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -545,7 +553,7 @@ elif st.session_state['active_menu'] == 'Bülten':
         if uploaded_pdf is not None:
             try:
                 reader = PdfReader(uploaded_pdf)
-                for page in reader.pages: final_text += page.extract_text() or ""
+                final_text = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
             except: pass
         elif pasted_text.strip(): final_text = pasted_text
             
@@ -591,7 +599,6 @@ elif st.session_state['active_menu'] == 'Bülten':
             st.success(f"✅ ANALİZ TAMAMLANDI! Veriler Bulut Hafızasına Kilitlendi.")
             st.rerun()
 
-    # 👑 KULLANICI İSTEĞİ: SEÇİLEN TAKVİM GÜNÜNDE BÜLTEN VARSA EN ALTTA MATRİS ÖZETİNİ GÖSTERME ALANI
     st.write("---")
     st.markdown("### 🗂️ Bu Tarihe Ait Mevcut Yüklü Bülten Verileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -613,7 +620,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -644,7 +651,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     components.html(radar_final_js, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# SAYFA: ANALİZ DETAY
+# SAYFA: ANALİZ DETAY (👑 MATRİSİN BİREBİR AYNI ŞABLON KOPYASI)
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Matris Şablon Düzeni)")
@@ -657,7 +664,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -779,7 +786,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
             .race-header {{ font-size: 11pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 8.5pt; text-align: left; }}
+            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 8.5pt; text-overflow: ellipsis; }}
             th {{ background-color: #f6f8fa; font-weight: bold; }}
             .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
             .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #1f6feb; font-size:10.5pt; line-height:1.6; page-break-inside: avoid; }}
@@ -849,5 +856,5 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
 
-# 👑 GLOBAL KİLİTLİ PREMIUM FOOTER - TÜM SAYFALARDA ÇAKILI
+# SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
