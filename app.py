@@ -8,34 +8,91 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="QUANTUM GLOBAL TERMINAL v6.0", page_icon="🌌", layout="centered")
+st.set_page_config(page_title="QUANTUM GLOBAL TERMINAL v6.5", page_icon="🌌", layout="centered")
 
-# PREMIUM EXECUTIVE CSS ARAYÜZÜ
+# PREMIUM EXECUTIVE CSS ARAYÜZÜ (3+2 GRID UYUMLU)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #c9d1d9; }
-    .stTabs [data-baseweb="tab"] { color: #8b949e !important; font-weight: bold; font-size: 14px; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #58a6ff !important; border-bottom-color: #58a6ff !important; }
-    .stButton>button { width: 100%; border-radius: 12px; background: linear-gradient(135deg, #1f6feb 0%, #238636 100%); color: white !important; font-weight: bold; padding: 12px; border: none; box-shadow: 0px 4px 15px rgba(35, 134, 54, 0.3); }
+    
+    /* İki satırlı buton navigasyonunun mobil optimizasyonu */
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 10px; 
+        padding: 10px; 
+        font-weight: bold; 
+        font-size: 13px;
+        transition: all 0.3s ease;
+    }
+    /* Aktif Olmayan Butonların Asil Koyu Tonalitesi */
+    .stButton>button[data-testid="stBaseButton-secondary"] {
+        background-color: #161b22 !important;
+        color: #8b949e !important;
+        border: 1px solid #30363d !important;
+    }
+    /* Aktif Olan Sayfa Butonunun Premium Parlayan Gradientsiz Tonu */
+    .stButton>button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3);
+    }
+    
     .quant-card { border: 1px solid #30363d; padding: 22px; border-radius: 14px; margin-bottom: 25px; background-color: #161b22; border-left: 6px solid #1f6feb; }
     .telemetry-badge { background-color: #21262d; border: 1px solid #30363d; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }
     .metric-sub-line { font-size: 12px; color: #8b949e; margin-left: 15px; font-family: monospace; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🌌 Quant Global Terminal v6.0")
+st.title("🌌 Quant Global Terminal v6.5")
 
 # CANLI TELEMETRİ PANELİ
 t_col1, t_col2, t_col3 = st.columns(3)
-t_col1.markdown('<div class="telemetry-badge">📡 ENGINE: ABSOLUTE FIXED</div>', unsafe_allow_html=True)
-t_col2.markdown('<div class="telemetry-badge">🧠 DASHBOARD: INTERACTIVE</div>', unsafe_allow_html=True)
-t_col3.markdown('<div class="telemetry-badge">⚡ PROTECTION: INDEX SHIELD</div>', unsafe_allow_html=True)
+t_col1.markdown('<div class="telemetry-badge">📡 UI: 3+2 MOBILE GRID</div>', unsafe_allow_html=True)
+t_col2.markdown('<div class="telemetry-badge">🧠 MATRIX: ALL RACES DYNAMIC</div>', unsafe_allow_html=True)
+t_col3.markdown('<div class="telemetry-badge">⚡ APP STATE: PROTECTION</div>', unsafe_allow_html=True)
 
-menu = st.tabs(["📋 Bülten Yükleme", "🔬 Derin Analiz Matrisi", "🎟️ Satır Satır Kuponlar & Rapor", "📊 Performans Dashboard'u", "🛡️ Otonom Otopsi"])
+st.write("---")
+
+# 🧠 DURUM TABANLI NAVİGASYON HAFIZASI
+if 'active_menu' not in st.session_state:
+    st.session_state['active_menu'] = 'Bülten' # İlk açılışta bülten sekmesi aktif gelir
+
+# 📊 NAVİGASYON PANELİ GRİD YAPISI (3 ÜSTTE - 2 ALTTA)
+# Üst Satır (3 Menü)
+m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
+with m_row1_col1:
+    type_dash = "primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary"
+    if st.button("📊 Dashboard", type=type_dash, use_container_width=True):
+        st.session_state['active_menu'] = 'Dashboard'
+
+with m_row1_col2:
+    type_bulten = "primary" if st.session_state['active_menu'] == 'Bülten' else "secondary"
+    if st.button("📋 Bülten", type=type_bulten, use_container_width=True):
+        st.session_state['active_menu'] = 'Bülten'
+
+with m_row1_col3:
+    type_analiz = "primary" if st.session_state['active_menu'] == 'Analiz' else "secondary"
+    if st.button("🔬 Analiz", type=type_analiz, use_container_width=True):
+        st.session_state['active_menu'] = 'Analiz'
+
+# Alt Satır (2 Menü)
+m_row2_col1, m_row2_col2 = st.columns(2)
+with m_row2_col1:
+    type_tahmin = "primary" if st.session_state['active_menu'] == 'Tahmin' else "secondary"
+    if st.button("🎟️ Tahmin", type=type_tahmin, use_container_width=True):
+        st.session_state['active_menu'] = 'Tahmin'
+
+with m_row2_col2:
+    type_sonuc = "primary" if st.session_state['active_menu'] == 'Yarış Sonuçları' else "secondary"
+    if st.button("🛡️ Yarış Sonuçları", type=type_sonuc, use_container_width=True):
+        st.session_state['active_menu'] = 'Yarış Sonuçları'
+
+st.write("---")
 
 API_URL = st.secrets.get("API_URL", "")
 
-# DİNAMİK HESAPLAMA ÇEKİRDEĞİ (MUTLAK ENDEKS KORUMALI)
+# MUTLAK ENDEKS KORUMALI ÇEKİRDEK HESAPLAYICI
 def run_quantum_core(text_input, num_races):
     hasher = hashlib.md5(text_input.encode('utf-8'))
     digest = hasher.hexdigest()
@@ -44,7 +101,6 @@ def run_quantum_core(text_input, num_races):
     
     L = len(digest)
     for i in range(1, num_races + 1):
-        # Güvenlik Kalkanı: Modulo L kullanımı sayesinde asla taşma (IndexError) yaşanmaz!
         idx = (i * 3) % L
         h1 = (int(digest[idx], 16) % 14) + 1
         h2 = ((int(digest[(idx+1)%L], 16) + 5) % 14) + 1
@@ -75,8 +131,11 @@ def run_quantum_core(text_input, num_races):
         })
     return races
 
-# SEKME 1: BÜLTEN YÜKLEME (GÜVEN DUVARLI)
-with menu[0]:
+
+# ==================== SEYİR DEFTERİ VE SAYFA İÇERİKLERİ ====================
+
+# 1. MENÜ: BÜLTEN
+if st.session_state['active_menu'] == 'Bülten':
     st.subheader("📋 Bülten Veri Enjeksiyonu")
     uploaded_pdf = st.file_uploader("Orijinal Bülten PDF Dosyası Yükleyin:", type=["pdf"])
     pasted_text = st.text_area("Veya Bülten Metnini Yapıştırın:", height=150)
@@ -116,14 +175,14 @@ with menu[0]:
             st.session_state['quantum_results'] = run_quantum_core(final_text, detected_races)
             st.session_state['analyzed'] = True
             st.session_state['num_races'] = detected_races
-            st.success(f"✅ ANALİZ TAMAMLANDI: {detected_races} koşunun tamamı kilitlendi!")
+            st.success(f"✅ ANALİZ TAMAMLANDI: {detected_races} koşunun tamamı kilitlendi! Üstten 'Analiz' veya 'Tahmin' alanına geçebilirsiniz.")
 
-# SEKME 2: CANLI ANALİZ MATRİSİ
-with menu[1]:
+# 2. MENÜ: ANALİZ
+elif st.session_state['active_menu'] == 'Analiz':
     if 'analyzed' in st.session_state:
         st.subheader(f"🔬 {st.session_state['num_races']} Koşunun Derin Dağılımları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f"🏇 KOŞU {r['race_no']} - Derin Metrik Analiz Raporu", expanded=True):
+            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
                 st.markdown(f"""
                 🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio1']} | 🌪️ Aerodinamik: %{r['aero1']} | 🕸️ Lobi: %{r['lobby1']}</div>
                 🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio2']} | 🌪️ Aerodinamik: %{r['aero2']} | 🕸️ Lobi: %{r['lobby2']}</div>
@@ -131,13 +190,16 @@ with menu[1]:
                 🏅 **#{r['h4']} {r['name4']} (Skor: {r['score4']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio4']} | 🌪️ Aerodinamik: %{r['aero4']} | 🕸️ Lobi: %{r['lobby4']}</div>
                 <p style="margin-top:10px;"><b>🎯 Bahis Düzeni:</b> Ganyan: #{r['h1']} | İkili: {r['h1']}-{r['h2']} | Tabela: {r['h1']}//{r['h2']}//{r['h3']}//{r['h4']}</p>
                 """, unsafe_allow_html=True)
-    else: st.info("💡 Lütfen ilk sekmeden bülten yüklemesi yapın.")
+    else:
+        st.info("💡 Lütfen ilk önce 'Bülten' sekmesinden yükleme yapıp motoru tetikleyin.")
 
-# SEKME 3: SATIR SATIR KUPONLAR & PDF RAPORU
-with menu[2]:
+# 3. MENÜ: TAHMİN
+elif st.session_state['active_menu'] == 'Tahmin':
     if 'analyzed' in st.session_state:
         res = st.session_state['quantum_results']
         n_races = st.session_state['num_races']
+        
+        st.subheader(f"🎟️ Tüm {n_races} Koşu İçin Satır Satır Kupon Şablonları")
         
         k1_lines, k2_lines, k3_lines = [], [], []
         for r in res:
@@ -160,12 +222,12 @@ with menu[2]:
         
         pdf_bytes = HTML(string=pdf_html).write_pdf()
         st.download_button(label="📥 SON SAYFA KORUMALI PREMIUM PDF RAPORUNU İNDİR", data=pdf_bytes, file_name="quantum_report.pdf", mime="application/pdf")
+    else:
+        st.info("💡 Rapor ve kupon üretimi için önce 'Bülten' alanından veri yüklemelisiniz.")
 
-# 🔥 SEKME 4: PERFORMANS DASHBOARD'U (GÖRSEL GRAFİK PANELİ)
-with menu[3]:
+# 4. MENÜ: DASHBOARD
+elif st.session_state['active_menu'] == 'Dashboard':
     st.subheader("📊 Model Geçmiş Performans ve Kararlılık Trendi")
-    st.caption("Aşağıdaki interaktif grafikler Google Sheets'te biriken geçmiş büyük veri (Big Data) tablonuzdan anlık üretilmektedir:")
-    
     if API_URL:
         try:
             with st.spinner("📡 Canlı Büyük Veri Havuzu Çekiliyor..."):
@@ -174,34 +236,29 @@ with menu[3]:
                 
             if historical_data and len(historical_data) > 0:
                 df = pd.DataFrame(historical_data)
-                
-                # Grafik 1: Günlere Göre Toplam İşlenen Hata/Veri Hacmi
                 st.markdown("#### 📈 Model Yoğunluk Eğrisi (Zamana Bağlı Veri Akışı)")
                 df['Tarih_Clean'] = pd.to_datetime(df['Tarih']).dt.date
                 line_data = df.groupby('Tarih_Clean').size().reset_index(name='Kayıt Sayısı')
                 st.line_chart(data=line_data, x='Tarih_Clean', y='Kayıt Sayısı')
                 
-                # Grafik 2: Algoritmanın Geçmiş Sapma Nedenleri Dağılımı
-                st.markdown("#### 🔍 Kritik Varyans Dağılımları (En Sık Yaşanan Sapma Paternleri)")
+                st.markdown("#### 🔍 Kritik Varyans Dağılımları")
                 bar_data = df['Sapma_Nedeni'].value_counts()
                 st.bar_chart(bar_data)
                 
-                # Detaylı Tablo İnceleme
                 with st.expander("🗃️ Tüm Geçmiş Hafıza Log Dosyalarını İncele"):
                     st.dataframe(df, use_container_width=True)
             else:
-                # Eğer veri henüz hiç birikmediyse, ürünü lüks göstermek için ilk gün örnek simülasyon grafiği basar
-                st.info("💡 Kalıcı veri tabanınızda henüz yeterli kayıt birikmedi. İlk gün simüle grafik yapısı aşağıda gösterilmektedir:")
+                st.info("💡 Kalıcı veri tabanınızda henüz yeterli kayıt birikmedi. Örnek grafik yapısı aşağıdadır:")
                 mock_data = pd.DataFrame({"Gün": ["1. Gün", "2. Gün", "3. Gün", "4. Gün"], "Güven Endeksi": [88, 91, 94, 96], "Sapma Nedeni": ["Lobi Sinyali", "Rüzgar Vektörü", "Lobi Sinyali", "Padok Isısı"]})
                 st.line_chart(data=mock_data, x="Gün", y="Güven Endeksi")
                 st.bar_chart(mock_data["Sapma Nedeni"].value_counts())
-        except Exception as e:
+        except:
             st.warning("Veri tabanından canlı grafikler yüklenirken gecikme yaşandı veya API henüz boş.")
     else:
         st.error("Secrets alanından API_URL tanımlanmadığı için dashboard veri çekemiyor.")
 
-# SEKME 5: OTONOM OTOPSİ
-with menu[4]:
+# 5. MENÜ: YARIŞ SONUÇLARI
+elif st.session_state['active_menu'] == 'Yarış Sonuçları':
     st.subheader("🛡️ Toplu Gün Sonu Sonuç Enjeksiyonu")
     sapma = st.selectbox("Bu yarış gününde tespit edilen en baskın dış sapma etkeni neydi?", ["Medyadaki Aldatıcı Sapma (Deception Delta)", "Mikro Meteorolojik Rüzgar Koridoru Kırılması", "Padoktaki Biyo-Stres Sinyali", "Normal Koşu Akışı / Stabil Patern"])
     bulk_data = st.text_area("Gün sonu tüm sıralama ve sonuç metnini buraya yapıştırın (Copy-Paste):", height=150)
@@ -213,3 +270,4 @@ with menu[4]:
                 requests.post(API_URL, json=payload)
                 st.success("🎯 KUSURSUZ: Gün sonu analizi başarıyla kalıcı hafızaya kilitlendi ve Dashboard'a işlendi!")
             except: st.error("API sunucu bağlantı hatası.")
+        else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
