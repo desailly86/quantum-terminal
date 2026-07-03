@@ -1,4 +1,5 @@
 streamlit
-weasyprint
 pandas
 requests
+pypdf
+weasyprint
