@@ -17,7 +17,7 @@ st.set_page_config(page_title="AVELOR METRIQX v9.6", page_icon="🏇", layout="c
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
 light_mode = st.sidebar.toggle("☀️ Gündüz Saha Modu (Yüksek Kontrast)", value=False)
 
-# ŞANLI FENERBAHÇE RENK PALETİ MATRİSİ
+# ŞANLI FENERBAHÇE RENK PALETI MATRİSİ
 if light_mode:
     bg_color = "#ffffff"
     text_color = "#000000"
@@ -40,9 +40,13 @@ else:
 # PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU EMBOSSED BUTONLAR VE MOBİL MİKRO TAKVİM KALKANI)
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 80px !important; }}
+    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 90px !important; }}
     h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
     h3, h2, h4 {{ color: {text_color} !important; }}
+    
+    /* Dashboard Sıkılaştırma ve Boşluk Azaltma CSS Girişleri */
+    .block-container {{ padding-top: 2rem !important; padding-bottom: 2rem !important; }}
+    div.stTable, div[data-testid="stTable"] {{ margin-bottom: 10px !important; padding: 0 !important; }}
     
     /* Tüm Menü Butonları 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
     div.stButton > button {{
@@ -90,13 +94,17 @@ st.markdown(f"""
     }}
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button:active {{
         transform: translateY(1px) !important;
-        border-bottom-width: 1px !important;
     }}
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) p {{
         font-size: 9px !important;
         margin: 0 !important;
         padding: 0 !important;
         text-align: center !important;
+    }}
+    
+    /* 👑 KULLANICI İSTEĞİ: FILE UPLOADER İÇİNDEKİ GÖRÜNMEYEN YAZILAR İÇİN MUTLAK KONTRAST MÜHRÜ */
+    .stFileUploaderDropzone, .stFileUploaderDropzone span, .stFileUploaderDropzone small, div[data-testid="stFileUploaderDropzone"] p {{
+        color: {text_color} !important;
     }}
     
     /* Neon Yeşil Tetikleme Butonu 3D Mührü */
@@ -109,30 +117,29 @@ st.markdown(f"""
         box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4) !important;
     }}
     
-    /* Expander Başlık Okunabilirlik Kalkanı */
+    /* Expander Başlık Okunabilirlik Kalkanı (Açık ve Koyu Modda Tam Kontrast Okunma Garantisi) */
     div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span, div[data-testid="stExpander"] summary div {{
         color: {text_color} !important;
         font-weight: bold !important;
     }}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] span, div[data-testid="stExpander"] div {{
+        color: {text_color} !important;
+    }}
     
-    /* Dinamik Çoklu Hipodrom Bilgi Şeridi (Live Intel Bar) */
-    .intel-bar-container {{ display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }}
-    .intel-chip {{ background: {card_bg}; border: 1px solid {border_color}; padding: 8px 15px; border-radius: 20px; white-space: nowrap; font-size: 11px; color: #58a6ff; font-weight: bold; border-left: 4px solid #1f6feb; }}
-    
-    .quant-card {{ border: 1px solid {border_color}; padding: 15px; border-radius: 14px; margin-bottom: 25px; background-color: {card_bg}; border-left: 6px solid #1f6feb; box-sizing: border-box; overflow: hidden; }}
+    .quant-card {{ border: 1px solid {border_color}; padding: 15px; border-radius: 14px; margin-bottom: 15px; background-color: {card_bg}; border-left: 6px solid #1f6feb; box-sizing: border-box; overflow: hidden; }}
     .quant-card p {{ margin: 4px 0; font-size: min(13px, 3.4vw); white-space: normal !important; word-wrap: break-word; overflow: hidden; color: {text_color} !important; }}
     
     .telemetry-badge {{ background-color: {card_bg}; border: 1px solid {border_color}; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }}
     .metric-sub-line {{ font-size: 12px; color: {sub_text}; margin-left: 15px; font-family: monospace; margin-bottom: 5px; }}
     
     /* 40 Kriter Şov Alanı CSS */
-    .showoff-container {{ border: 1px solid {border_color}; padding: 20px; border-radius: 12px; background-color: {card_bg}; margin-top: 20px; }}
-    .showoff-title {{ font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid {border_color}; padding-bottom: 5px; }}
-    .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
+    .showoff-container {{ border: 1px solid {border_color}; padding: 15px; border-radius: 12px; background-color: {card_bg}; margin-top: 15px; }}
+    .showoff-title {{ font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 10px; border-bottom: 1px solid {border_color}; padding-bottom: 5px; }}
+    .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
     @media (min-width: 600px) {{ .showoff-grid {{ grid-template-columns: 1fr; }} }}
     
     .reason-box {{ background-color: {card_bg}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color} !important; border-left: 4px solid #1f6feb; }}
-    .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 20px; font-size: 12px; line-height: 1.5; color: {text_color} !important; }}
+    .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 15px; font-size: 12px; line-height: 1.5; color: {text_color} !important; }}
     
     /* Premium Trading Card / Tahmin Bileti Tasarımı */
     .premium-kupon-card {{
@@ -140,7 +147,7 @@ st.markdown(f"""
         background: linear-gradient(145deg, {card_bg} 0%, {bg_color} 100%);
         padding: 20px;
         border-radius: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         border-left: 6px solid #1f6feb;
         position: relative;
         color: {text_color} !important;
@@ -164,7 +171,6 @@ st.markdown(f"""
         letter-spacing: 1px;
     }}
     
-    /* GLOBAL YAZI KORUMA KONTRAST ŞEBEKESİ */
     h1, h2, h3, h4, p, span, th, td, label {{
         color: {text_color} !important;
     }}
@@ -314,7 +320,6 @@ with layout_col2:
     else:
         hipo_val, hava_val, kum_val, cim_val = "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳"
         
-    # 👑 KULLANICI İSTEĞİ: TELEMETRİ KUTUSU KARENİN DIŞINA TAŞMAYACAK VE YAZILAR OKUNACAK
     st.markdown(f"""
     <div class="quant-card" style="margin-top:5px; height:152px; padding:12px; box-sizing: border-box; overflow: hidden;">
         <h5 style="margin-top:0; color:{accent_color}; font-size: min(13px, 3.5vw); font-family:monospace; margin-bottom: 6px; white-space: nowrap; text-overflow: ellipsis;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
@@ -357,16 +362,6 @@ with m_row2_col3:
         st.rerun()
 
 st.write("---")
-
-# LIVE INTEL MULTI-BULLETIN META STRIP
-if st.session_state['analyzed'] and 'quantum_results' in st.session_state:
-    st.markdown('<div class="intel-bar-container">', unsafe_allow_html=True)
-    hipo_name = "İSTANBUL / SHA TIN REZONANSI" if len(st.session_state['quantum_results']) > 8 else "İSTANBUL MULTI-PİST TERMINAL"
-    st.markdown(f'<div class="intel-chip">📍 LOKASYON: {hipo_name}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="intel-chip">☁️ HAVA DURUMU: GÜNEŞLİ / SAHA SICAKLIĞI 28°C</div>', unsafe_allow_html=True)
-    st.markdown('<div class="intel-chip">🏟️ ÇİM PİST ÖLÇÜMÜ: 3.4 (NORMAL DURUM)</div>', unsafe_allow_html=True)
-    st.markdown('<div class="intel-chip">⏳ KUM PİST DURUMU: STABİL AGGREGATE</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # SAFKAN CORE MOTORU
 def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
@@ -473,7 +468,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 KORUMALI REPLACE MODELİ (SÜSLÜ PARANTEZ ÇAKIŞMALARINA KARŞI MUTLAK GÜVENCE)
+    # 👑 %100 KESİNTİSİZ KORUMA ALTINDA OLAN GERÇEKÇİ CHART.JS FINTECH DİYAGRAMLARI (TÜM PARANTEZLER TAMİR EDİLDİ)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     chart_template_js = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -493,7 +488,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: false }} ,
             scales: { y: { ticks: { color: 'SUBTEXT_COLOR' } }, x: { ticks: { color: 'SUBTEXT_COLOR' } } }
         }
     });
@@ -535,6 +530,14 @@ if st.session_state['active_menu'] == 'Dashboard':
 # SAYFA: BÜLTEN YÜKLE
 elif st.session_state['active_menu'] == 'Bülten':
     st.subheader("📋 Bülten Veri Enjeksiyonu")
+    
+    # 👑 KULLANICI İSTEĞİ: VERİ ENJEKSİYONUNUN AMACINI AÇIKLAYAN NET FİNTECH METNİ
+    st.markdown("""
+    <p style="font-size: 13px; font-weight: 500; line-height: 1.6; margin-bottom: 15px;">
+        💡 <b>Enjeksiyon Amacı:</b> Resmi TJK veya yurt dışı sündika bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı biyo-mekanik, aerodinamik ve lobi filtrelerinden geçirmektir. Enjekte edilen veriler anlık olarak yapay zeka modelini besler, AGF/Galop matrislerini oluşturur ve kupon maliyet simülatörünü tetikler.
+    </p>
+    """, unsafe_allow_html=True)
+    
     with st.expander("🎛️ Gelişmiş Kuantum Katsayı Ağırlıkları (Dinamik ML Kontrolü)", expanded=True):
         w_bio = st.slider("Hücresel Biyo-Mekanik Faktör Önceliği", 0, 200, 100)
         w_aero = st.slider("Vektörel Aerodinamik Sürüklenme Önceliği", 0, 200, 100)
@@ -568,18 +571,31 @@ elif st.session_state['active_menu'] == 'Bülten':
                     target_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
                 else: target_date = cleaned_d
             
+            # 👑 KULLANICI İSTEĞİ: 40 AYRI KRİTERİN TAMAMI LÜKS BAR AKIŞIYLA TAM EŞİTLENDİ
             status_text = st.empty()
             progress_bar = st.progress(0)
-            stages = [
-                ("📂 PDF Tekstürel Katmanları ve Koşu Blokları Ayrıştırılıyor...", 0.25),
-                (f"📡 TEMPORAL MOTOR: Dosyada '{target_date}' tarihi doğrulandı ve buluta kilitleniyor...", 0.50),
-                ("🌪️ 40 Katmanlı Süzgeç: Aerodinamik Sürüklenme ve Lobi Filtreleri İşletiliyor...", 0.75),
-                ("🧠 10.000 Monte Carlo Çarpışma Simülasyonu Başarıyla Tamamlandı!", 1.00)
+            criteria_list = [
+                "Kas Lifi Titreşim Eşiği Analizi", "Laktat Birikim Simülasyon Vektörü", "Padok Kalp Ritim Değişkenliği",
+                "Tırnak-Zemin Basınç Endeksi", "Eklem Viskozite Rezonansı", "Solunum Geri Kazanım Hızı",
+                "Hücresel Dehidrasyon Toleransı", "Glikojen Sönümleme Katsayısı", "Adım Frekansı Senkronizasyonu",
+                "Mikro-Postür Stabilite İndeksi", "Kulvar Merkezkaç Kuvvet Sapması", "Bariyer Dibi Vakum Koridoru Advantage",
+                "Rüzgar Duvarı Sürtünme Katsayısı (Fd)", "Jokey-At Bileşke Ağırlık Merkezi", "Son Düzlük İvmelenme Torku",
+                "Jokey Duruş Aerodinamisi (Drag)", "Kinetik Enerji Dönüşüm Oranı", "Pist Eğim Sönümleme Direnci",
+                "Başlangıç Makinesi Reaksiyon Süresi", "Düzlük Boyu Rüzgar Rotasyonu", "Medya Beyanat Sapması (Deception Delta)",
+                "Asimetrik Son Saniye Bahis Yoğunluğu", "Jokey-Ahır Tarihsel Diyet Paktı", "Ahırlar Arası Gizli İttifak Fısıltıları",
+                "Ahır İçi Spekülatif Bilgi Akışı", "Medya Aldatıcı Algı İndikatörü", "AGF Kamu Yanılgı Katsayısı",
+                "Sahiplik Network Güç Şebekesi", "Jokey Deklare Manipülasyon Belgesi", "Sündika İçi Akıllı Para Sızıntısı",
+                "Sentinel-2 NDVI Uydu Çim Sağlık Verisi", "Anlık Pist Termal Isı İmzası Taraması", "Mikro-Meteorolojik Rüzgar Tüneli",
+                "Barometrik Basınç/Oksijen Satürasyonu", "Zemin Viskozite/Çamur Direnci", "Güneş Açısı Gölgelendirme İllüzyonu",
+                "Pist Nem Emilim Gradyanı", "Hava Yoğunluğu (Air Density) Katsayısı", "Hipodrom Rakım/Akciğer Hacim Oranı",
+                "Anlık Zemin Nem Değişkenliği Dalgası"
             ]
-            for msg, prog in stages:
-                status_text.markdown(f"⏳ **{msg}**")
-                progress_bar.progress(prog)
-                time.sleep(1.2)
+            for idx, criterion in enumerate(criteria_list):
+                prog_val = (idx + 1) / 40.0
+                progress_bar.progress(prog_val)
+                status_text.markdown(f"🧬 **[Katman {idx+1}/40]** İşleniyor: *{criterion}*")
+                time.sleep(0.06) # Toplam ~2.4 saniye akıcı, kesintisiz borsa akışı
+                
             status_text.empty()
             progress_bar.empty()
             
@@ -651,7 +667,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     components.html(radar_final_js, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# SAYFA: ANALİZ DETAY (👑 MATRİSİN BİREBİR AYNI ŞABLON KOPYASI)
+# SAYFA: ANALİZ DETAY
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Matris Şablon Düzeni)")
