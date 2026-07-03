@@ -16,12 +16,12 @@ st.set_page_config(page_title="AVELOR METRQX v9.6", page_icon="🏇", layout="ce
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
 light_mode = st.sidebar.toggle("☀️ Gündüz Saha Modu (Yüksek Kontrast)", value=False)
 
-# 👑 KULLANICI İSTEĞİ: KOYU MOD TAMAMEN ŞANLI FENERBAHÇE RENKLERİNE ENDEKSLENDİ
+# ŞANLI FENERBAHÇE RENK PALETİ MATRİSİ
 if light_mode:
     bg_color = "#ffffff"
     text_color = "#000000"
     card_bg = "#f6f8fa"
-    border_color = "#fcd116"  # Sarı Sınırlar Sabit Tutuldu
+    border_color = "#fcd116"
     accent_color = "#0969da"
     sub_text = "#333333"
     intel_bg = "#fff3cd"
@@ -43,7 +43,7 @@ st.markdown(f"""
     h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
     h3, h2, h4 {{ color: {text_color} !important; }}
     
-    /* 👑 KULLANICI İSTEĞİ: TÜM BUTONLAR 3 BOYUTLU KABARTMALI SARI KENARLIKLI YAPILDI */
+    /* Tüm Butonlar 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
     div.stButton > button {{
         width: 100%;
         border-radius: 10px !important;
@@ -68,7 +68,7 @@ st.markdown(f"""
         box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
     }}
     
-    /* 👑 KULLANICI İSTEĞİ: MOBİLDE ASLA PATLAMAYAN MİKRO-ÖLÇEKLİ TAKVİM GRİD CSS KALKANI */
+    /* 👑 KULLANICI İSTEĞİ: TAKVİM GRİDİNİ ASLA PATLAMAYACAK ŞEKİLDE MİKRO BOYUTLARA İNDİREN KESKİN CSS SEÇİCİSİ */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) {{
         gap: 2px !important;
     }}
@@ -77,10 +77,10 @@ st.markdown(f"""
         min-width: 0px !important;
     }}
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button {{
-        padding: 2px 0px !important;
+        padding: 1px 0px !important;
         font-size: 9px !important;
-        height: 22px !important;
-        min-height: 22px !important;
+        height: 18px !important;
+        min-height: 18px !important;
         border-radius: 4px !important;
         margin: 1px 0 !important;
         border: 1px solid {border_color} !important;
@@ -162,7 +162,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 👑 KULLANICI İSTEĞİ: YENİLENEN TAM ASİL BAŞLIK DÜZENİ
+# TAM ASİL BAŞLIK DÜZENİ
 st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
@@ -431,7 +431,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 BURASI KESİNTİSİZ KORUMA ALTINDADIR: 3 DEV CHART.JS FİNANSAL DİYAGRAMI (F-STRING PARANTEZ HATASI %100 TAMİR EDİLDİ)
+    # 👑 %100 KESİNTİSİZ KORUMA ALTINDA OLAN GERÇEKÇİ CHART.JS FINTECH DİYAGRAMLARI (TÜM PARANTEZLER TAMİR EDİLDİ)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     components.html(f"""
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -577,7 +577,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -618,7 +618,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -720,7 +720,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
-        # PDF ÇIKTISI
         pdf_html = f"""
         <html>
         <head>
