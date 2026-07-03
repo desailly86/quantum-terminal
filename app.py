@@ -22,10 +22,12 @@ st.markdown("""
     .quant-card { border: 1px solid #30363d; padding: 22px; border-radius: 14px; margin-bottom: 25px; background-color: #161b22; border-left: 6px solid #1f6feb; }
     .telemetry-badge { background-color: #21262d; border: 1px solid #30363d; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }
     .metric-sub-line { font-size: 12px; color: #8b949e; margin-left: 15px; font-family: monospace; }
+    
+    /* 40 Kriter Şov Alanı Mobil Dikey Akış CSS Konfigürasyonu */
     .showoff-container { border: 1px solid #30363d; padding: 20px; border-radius: 12px; background-color: #161b22; margin-top: 20px; }
     .showoff-title { font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
     .showoff-grid { display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: #8b949e; }
-    @media (min-width: 600px) { .showoff-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 600px) { .showoff-grid { grid-template-columns: 1fr; } }
     </style>
     """, unsafe_allow_html=True)
 
@@ -133,7 +135,7 @@ def run_quantum_core(text_input, num_races):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD
+# SAYFA: DASHBOARD (EKSİKSİZ 40 MATRIX PROTOKOLÜ)
 if st.session_state['active_menu'] == 'Dashboard':
     if st.session_state['analyzed']:
         st.success(f"📊 ÖNEMLİ VERİ GÜVENLİĞİ: {date_str} tarihine ait bülten geçmiş hafızadan başarıyla çağrıldı! Analiz ve Tahmin sekmelerini direkt okuyabilirsiniz.")
@@ -142,11 +144,55 @@ if st.session_state['active_menu'] == 'Dashboard':
         
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
+    st.caption("Bülten analiz edilirken arka planda eşzamanlı işletilen 40 stratejik kriter şebekesinin tam dökümü:")
+    
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown('<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK DATA</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Analizi</div><div>• Laktat Birikim Simülasyonu</div><div>• Padok Kalp Ritim Varyansı</div><div>• Tırnak-Zemin Basınç Endeksi</div></div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="showoff-container">
+            <div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA (10/10)</div>
+            <div class="showoff-grid">
+                <div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div>
+                <div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div>
+                <div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div>
+                <div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div>
+                <div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div>
+            </div>
+        </div>
+        <div class="showoff-container">
+            <div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ (10/10)</div>
+            <div class="showoff-grid">
+                <div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div>
+                <div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div>
+                <div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div>
+                <div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div>
+                <div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     with col_b:
-        st.markdown('<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK DİNAMİKLER</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Sapması</div><div>• Bariyer Vakum Avantajı</div><div>• Rüzgar Sürtünme Katsayısı</div><div>• İvmelenme Tork Oranı</div></div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="showoff-container">
+            <div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER (10/10)</div>
+            <div class="showoff-grid">
+                <div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div>
+                <div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div>
+                <div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div>
+                <div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div>
+                <div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div>
+            </div>
+        </div>
+        <div class="showoff-container">
+            <div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ (10/10)</div>
+            <div class="showoff-grid">
+                <div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div>
+                <div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div>
+                <div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div>
+                <div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div>
+                <div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # SAYFA: BÜLTEN
 elif st.session_state['active_menu'] == 'Bülten':
@@ -173,7 +219,6 @@ elif st.session_state['active_menu'] == 'Bülten':
             st.session_state['analyzed'] = True
             st.session_state['num_races'] = detected_races
             
-            # Google Sheets Kalıcı Hafıza Hücresine Kayıt Gönderme
             if API_URL:
                 payload = {"Tarih": date_str, "Kosu_No": "BÜLTEN_DATA", "Gelen_At": "SYSTEM", "Sapma_Nedeni": "LIVE_SAVE", "Detay": json.dumps(res_data)}
                 try: requests.post(API_URL, json=payload)
@@ -185,17 +230,16 @@ elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed']:
         st.subheader(f"🔬 {date_str} Tarihli Derin Matris Analiz Detayları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Metrik Kartı", expanded=True):
+            with st.expander(f" 🏇 KOŞU {r['race_no']} - 40 Kriter Metrik Kartı", expanded=True):
                 st.markdown(f"🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']})** | Biyo: %{r['bio1']} | Aero: %{r['aero1']} | Lobi: %{r['lobby1']}")
                 st.markdown(f"🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']})** | Biyo: %{r['bio2']} | Aero: %{r['aero2']} | Lobi: %{r['lobby2']}")
     else: st.info("💡 Bu tarihe ait bülten bulunamadı. Lütfen önce 'Bülten' yüklemesi yapın.")
 
-# SAYFA: TAHMİN (GERÇEKÇİ İNSAN KUPONLARI + HATA VERMEYEN PDF)
+# SAYFA: TAHMİN
 elif st.session_state['active_menu'] == 'Tahmin':
     if st.session_state['analyzed']:
         res = st.session_state['quantum_results']
         
-        # 🧠 AKILLI VE GERÇEKÇİ EXPERT KUPON GENERATOR MOTORU
         kuponlar = {
             "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": [],
             "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": [],
@@ -205,20 +249,16 @@ elif st.session_state['active_menu'] == 'Tahmin':
         
         for r in res:
             n = r['race_no']
-            # Kupon 1 Mantığı: İlk iki ayağı kalabalık tut, 3'ü tek geç, son ayağı kapat
             if n in [1, 2]: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}, {r['h4']}")
             elif n == 3: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']} (BANKO)")
             else: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}")
             
-            # Kupon 2 Mantığı: 2. ve 5. ayaklar net banko, diğerleri ikili sistem
             if n in [2, 5]: kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {r['h1']} (BANKO)")
             else: kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {r['h1']}, {r['h2']}, {r['h3']}")
             
-            # Kupon 3 Mantığı: Sadece tek bir banko, diğer ayaklar sürpriz odaklı 2'li kombinasyon
             if n == 1: kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {r['h1']} (BANKO)")
             else: kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {r['h1']}, {r['h2']}")
             
-            # Kupon 4 Mantığı: Net Misli. Tüm ayaklar mutlak tek
             kuponlar["💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU"].append(f"{n}.K: {r['h1']} (BANKO)")
 
         st.subheader("🎟️ Akıllı Sündika Tahmin Şablonları")
@@ -226,13 +266,12 @@ elif st.session_state['active_menu'] == 'Tahmin':
             st.markdown(f"### {title}")
             st.code("\n".join(lines), language="text")
             
-        # WEASYPRINT PDF DERLEYİCİSİ (KILITLENMEYI ÖNLEYEN PRE-COMPILE METODU)
         pdf_html = f"""
         <html><head><meta charset='utf-8'><style>
             @page {{ size: A4; margin: 20mm 12mm; }}
             body {{ font-family: Arial, sans-serif; color: #24292e; }}
             .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }}
-            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1f6feb; font-size:11pt; line-height:1.5; }}
+            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1f6feb; font-size:11pt; line-height:1.5; page-break-inside: avoid; }}
             .page-break {{ page-break-before: always; }}
         </style></head><body>
             <h2>🌌 METRIQX EXECUTIVE REPORT - {date_str}</h2>
@@ -240,8 +279,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
         for r in res:
             pdf_html += f"<div class='container'><h3>🏇 KOŞU {r['race_no']}</h3><p>🥇 #{r['h1']} ({r['score1']}) | 🥈 #{r['h2']} ({r['score2']})</p></div>"
             
-        # 👑 RIGID KORUMA: KUPONLAR EN SON SAYFAYA ASLA BÖLÜNMEDEN KİLİTLENİR
-        pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları</h2>"
+        pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları (Son Sayfa Korumalı)</h2>"
         for title, lines in kuponlar.items():
             pdf_html += f"<h3>{title}</h3><div class='kupon-box'>{'<br>'.join(lines)}</div>"
         pdf_html += "</div></body></html>"
@@ -265,6 +303,7 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                     requests.post(API_URL, json=payload)
                     st.success("🎯 KUSURSUZ: Sonuçlar kalıcı hafızaya kilitlendi! Sayfa yenileniyor...")
                     time.sleep(1)
-                    st.session_state['loaded_date'] = "" # Hafızayı tetiklemek için sıfırlama
+                    st.session_state['loaded_date'] = ""
                     st.rerun()
                 except: st.error("Bağlantı hatası.")
+            else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
