@@ -9,7 +9,7 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="METRIQX v7.0", page_icon="🏇", layout="centered")
+st.set_page_config(page_title="METRIQX v7.5", page_icon="🏇", layout="centered")
 
 # PREMIUM EXECUTIVE CSS ARAYÜZÜ
 st.markdown("""
@@ -21,9 +21,9 @@ st.markdown("""
     .stButton>button[data-testid="stBaseButton-primary"] { background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important; color: white !important; border: none !important; box-shadow: 0px 4px 12px rgba(31, 111, 235, 0.3); }
     .quant-card { border: 1px solid #30363d; padding: 22px; border-radius: 14px; margin-bottom: 25px; background-color: #161b22; border-left: 6px solid #1f6feb; }
     .telemetry-badge { background-color: #21262d; border: 1px solid #30363d; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }
-    .metric-sub-line { font-size: 12px; color: #8b949e; margin-left: 15px; font-family: monospace; }
+    .metric-sub-line { font-size: 12px; color: #8b949e; margin-left: 15px; font-family: monospace; margin-bottom: 5px; }
     
-    /* 40 Kriter Şov Alanı Mobil Dikey Akış CSS Konfigürasyonu */
+    /* 40 Kriter Şov Alanı CSS Konfigürasyonu */
     .showoff-container { border: 1px solid #30363d; padding: 20px; border-radius: 12px; background-color: #161b22; margin-top: 20px; }
     .showoff-title { font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
     .showoff-grid { display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: #8b949e; }
@@ -31,7 +31,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v7.0")
+st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v7.5")
 
 # ⏰ JAVASCRIPT CANLI SAAT VE TARİH SENSÖRÜ
 import streamlit.components.v1 as components
@@ -135,7 +135,7 @@ def run_quantum_core(text_input, num_races):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD (EKSİKSİZ 40 MATRIX PROTOKOLÜ)
+# SAYFA: DASHBOARD
 if st.session_state['active_menu'] == 'Dashboard':
     if st.session_state['analyzed']:
         st.success(f"📊 ÖNEMLİ VERİ GÜVENLİĞİ: {date_str} tarihine ait bülten geçmiş hafızadan başarıyla çağrıldı! Analiz ve Tahmin sekmelerini direkt okuyabilirsiniz.")
@@ -198,7 +198,7 @@ if st.session_state['active_menu'] == 'Dashboard':
 elif st.session_state['active_menu'] == 'Bülten':
     st.subheader(f"📋 {date_str} Günü İçin Bülten Enjeksiyonu")
     uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
-    pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=150)
+    pasted_text = st.text_area("Veya Bülten Metnini Yapıştırın:", height=150)
     
     if st.button("🚀 MATRIX ANALIZI TETİKLE"):
         final_text = ""
@@ -225,14 +225,20 @@ elif st.session_state['active_menu'] == 'Bülten':
                 except: pass
             st.success("✅ ANALİZ BAŞARIYLA KALICI BEYNE KİLİTLENDİ!")
 
-# SAYFA: ANALİZ
+# 🔥 SAYFA: ANALİZ (GERİ GETİRİLEN VE TAMAMEN EKSİKSİZ KURUMSAL YAPILANDIRILMIŞ DEEP ALAN)
 elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed']:
-        st.subheader(f"🔬 {date_str} Tarihli Derin Matris Analiz Detayları")
+        st.subheader(f"🔬 {date_str} Tarihli 40 Kriter Derin Matris Analiz Detayları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f" 🏇 KOŞU {r['race_no']} - 40 Kriter Metrik Kartı", expanded=True):
-                st.markdown(f"🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']})** | Biyo: %{r['bio1']} | Aero: %{r['aero1']} | Lobi: %{r['lobby1']}")
-                st.markdown(f"🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']})** | Biyo: %{r['bio2']} | Aero: %{r['aero2']} | Lobi: %{r['lobby2']}")
+            with st.expander(f"🏇 KOŞU {r['race_no']} - Hücresel Vektör Dağılım Kartı", expanded=True):
+                st.markdown(f"""
+                🥇 **#{r['h1']} {r['name1']} (Nihai Skor: {r['score1']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio1']} | 🌪️ Aerodinamik: %{r['aero1']} | 🕸️ Lobi Sinyali: %{r['lobby1']}</div>
+                🥈 **#{r['h2']} {r['name2']} (Nihai Skor: {r['score2']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio2']} | 🌪️ Aerodinamik: %{r['aero2']} | 🕸️ Lobi Sinyali: %{r['lobby2']}</div>
+                🥉 **#{r['h3']} {r['name3']} (Nihai Skor: {r['score3']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio3']} | 🌪️ Aerodinamik: %{r['aero3']} | 🕸️ Lobi Sinyali: %{r['lobby3']}</div>
+                🏅 **#{r['h4']} {r['name4']} (Nihai Skor: {r['score4']}/100)** <div class="metric-sub-line">└─🧬 Biyo-Mekanik: %{r['bio4']} | 🌪️ Aerodinamik: %{r['aero4']} | 🕸️ Lobi Sinyali: %{r['lobby4']}</div>
+                <p style="margin-top:12px; font-weight:bold; color:#58a6ff;">🎯 Tüm Bahis Seçenekleri Önerisi:</p>
+                <b>Ganyan (Favori):</b> #{r['h1']} &nbsp;|&nbsp; <b>Sıralı İkili:</b> {r['h1']} // {r['h2']} &nbsp;|&nbsp; <b>Tabela Bahsi:</b> {r['h1']} // {r['h2']} // {r['h3']} // {r['h4']}
+                """, unsafe_allow_html=True)
     else: st.info("💡 Bu tarihe ait bülten bulunamadı. Lütfen önce 'Bülten' yüklemesi yapın.")
 
 # SAYFA: TAHMİN
@@ -271,13 +277,30 @@ elif st.session_state['active_menu'] == 'Tahmin':
             @page {{ size: A4; margin: 20mm 12mm; }}
             body {{ font-family: Arial, sans-serif; color: #24292e; }}
             .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+            th, td {{ border: 1px solid #d0d7de; padding: 6px; font-size: 8.5pt; text-align: left; }}
+            th {{ background-color: #f6f8fa; }}
             .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1f6feb; font-size:11pt; line-height:1.5; page-break-inside: avoid; }}
             .page-break {{ page-break-before: always; }}
         </style></head><body>
             <h2>🌌 METRIQX EXECUTIVE REPORT - {date_str}</h2>
+            <h3>🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Tüm Bahis Seçenekleri</h3>
         """
         for r in res:
-            pdf_html += f"<div class='container'><h3>🏇 KOŞU {r['race_no']}</h3><p>🥇 #{r['h1']} ({r['score1']}) | 🥈 #{r['h2']} ({r['score2']})</p></div>"
+            pdf_html += f"""
+            <div class='container'>
+                <h3>🏇 KOŞU {r['race_no']} Derin Matris Dağılımı</h3>
+                <table>
+                    <thead><tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th></tr></thead>
+                    <tbody>
+                        <tr><td>🥇</td><td><b>#{r['h1']}</b></td><td><b>{r['name1']}</b></td><td><b>{r['score1']}</b></td><td>%{r['bio1']}</td><td>%{r['aero1']}</td><td>%{r['lobby1']}</td></tr>
+                        <tr><td>🥈</td><td>#{r['h2']}</td><td>{r['name2']}</td><td>{r['score2']}</td><td>%{r['bio2']}</td><td>%{r['aero2']}</td><td>%{r['lobby2']}</td></tr>
+                        <tr><td>🥉</td><td>#{r['h3']}</td><td>{r['name3']}</td><td>{r['score3']}</td><td>%{r['bio3']}</td><td>%{r['aero3']}</td><td>%{r['lobby3']}</td></tr>
+                        <tr><td>🏅</td><td>#{r['h4']}</td><td>{r['name4']}</td><td>{r['score4']}</td><td>%{r['bio4']}</td><td>%{r['aero4']}</td><td>%{r['lobby4']}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            """
             
         pdf_html += "<div class='page-break'><h2>🎟️ Kademeli Otomasyon Hazır Kuponları (Son Sayfa Korumalı)</h2>"
         for title, lines in kuponlar.items():
