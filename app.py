@@ -10,7 +10,7 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="METRIQX v9.6", page_icon="🏇", layout="centered")
+st.set_page_config(page_title="AVELOR: METRIQX v9.6", page_icon="🏇", layout="centered")
 
 # 🌓 GÜNDÜZ/GECE MODU SEÇİCİSİ (YAZI OKUNABİLİRLİĞİ %100 OPTİMİZE EDİLDİ)
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
@@ -38,9 +38,11 @@ else:
 # PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU BUTONLAR VE MUTLAK KONTRAST KALKANI)
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; }}
+    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 70px !important; }}
+    h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
+    h3, h2, h4 {{ color: {text_color} !important; }}
     
-    /* 👑 KULLANICI İSTEĞİ: TÜM BUTONLAR 3 BOYUTLU KABARTMALI HALE GETİRİLDİ */
+    /* 3 Boyutlu Kabartmalı Büyük Menü Butonları */
     div.stButton > button {{
         width: 100%;
         border-radius: 10px !important;
@@ -62,6 +64,19 @@ st.markdown(f"""
         transform: translateY(3px) !important;
         border-bottom-width: 1px !important;
         box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
+    }}
+    
+    /* 👑 KULLANICI İSTEĞİ: TAKVİMİ MATRİSİNİ KÜÇÜLTEN ÖZEL CSS HÜCRE KALKANI */
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button {{
+        padding: 4px 1px !important;
+        font-size: 10px !important;
+        border-radius: 6px !important;
+        border-bottom: 2px solid {border_color} !important;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.15) !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button:active {{
+        transform: translateY(1px) !important;
+        border-bottom-width: 1px !important;
     }}
     
     /* Neon Yeşil Tetikleme Butonu 3D Mührü */
@@ -103,16 +118,33 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
     
-    /* YAZI RENKLERİNİ GECE/GÜNDÜZ TOGGLE'INA %100 SABİTLEYEN HÜCRESEL KALKAN */
+    /* 👑 KULLANICI İSTEĞİ: SAYFANIN EN ALTINDA SABİTLENEN PREMIUM FOOTER */
+    .fixed-footer {{
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: {card_bg};
+        color: {sub_text};
+        text-align: center;
+        padding: 10px 0;
+        font-size: 11px;
+        font-family: monospace;
+        font-weight: bold;
+        border-top: 1px solid {border_color};
+        z-index: 9999;
+        letter-spacing: 1px;
+    }}
+    
     h1, h2, h3, h4, p, span, th, td, label {{
         color: {text_color} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# 👑 KULLANICI İSTEĞİ: MARKA VE ÜRÜN ADI BAŞLIĞI YENİDEN İADE EDİLDİ
-st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>Marka: Avelor &nbsp;&nbsp;|&nbsp;&nbsp; Ürün Adı: METRIQX</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 12px; font-weight: bold; margin-top: -8px; letter-spacing: 1px;'>EQUINE QUANTUM TELEMETRY TERMINAL v9.6</p>", unsafe_allow_html=True)
+# 👑 KULLANICI İSTEĞİ: RE-GÜNCELLENEN REZONANS BAŞLIĞI
+st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR: METRIQX</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
 
 API_URL = st.secrets.get("API_URL", "")
@@ -124,7 +156,7 @@ if 'ml_bias' not in st.session_state: st.session_state['ml_bias'] = {"bio": 0.0,
 if 'expand_matrix' not in st.session_state: st.session_state['expand_matrix'] = True
 if 'expand_detay' not in st.session_state: st.session_state['expand_detay'] = True
 
-# 👑 KULLANICI İSTEĞİ: İNLİNE MATRİS TAKVİM HAFIZA AYARLARI
+# Takvim Hafıza Hücreleri
 if 'cal_month' not in st.session_state: st.session_state['cal_month'] = pd.Timestamp.now().month
 if 'cal_year' not in st.session_state: st.session_state['cal_year'] = pd.Timestamp.now().year
 if 'selected_date_str' not in st.session_state: st.session_state['selected_date_str'] = pd.Timestamp.now().strftime("%Y-%m-%d")
@@ -160,7 +192,7 @@ if st.session_state['loaded_date'] != date_str:
             st.session_state['loaded_date'] = date_str
         except: pass
 
-# JAVASCRIPT CANLI SAAT VE GERÇEK KOŞU SAYAÇ KÖPRÜSÜ
+# JAVASCRIPT CANLI SAAT VE BÜLTENDEN ÇEKİLEN GERÇEK KOŞU SAYAÇ KÖPRÜSÜ
 if 'quantum_results' in st.session_state and st.session_state['quantum_results']:
     all_times = [r.get('time', '13:30') for r in st.session_state['quantum_results']]
     all_times.sort()
@@ -170,12 +202,10 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# 👑 KULLANICI İSTEĞİ: İNLİNE INTERAKTİF AYLIK TAKVİM VE TELEMETRİ YAN YANA PANELİ
-st.markdown("### 📅 Operasyon Zaman Şebekesi & Canlı Pist Telemetrisi")
+# 👑 TAKVİM VE PİST TELEMETRİ GİRİŞ ALANI (KÜÇÜLTÜLMÜŞ SÜRÜMÜ)
 layout_col1, layout_col2 = st.columns([1.1, 1])
 
 with layout_col1:
-    # İleri/Geri Butonlu Ay Düzeni
     cal_h1, cal_h2, cal_h3 = st.columns([1,3,1])
     with cal_h1:
         if st.button("◀", key="prev_month"):
@@ -186,7 +216,7 @@ with layout_col1:
             st.rerun()
     with cal_h2:
         months_tr = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-        st.markdown(f"<p style='text-align:center; font-weight:bold; font-size:13px; margin-top:8px;'>{months_tr[st.session_state['cal_month']-1]} {st.session_state['cal_year']}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align:center; font-weight:bold; font-size:12px; margin-top:6px;'>{months_tr[st.session_state['cal_month']-1]} {st.session_state['cal_year']}</p>", unsafe_allow_html=True)
     with cal_h3:
         if st.button("▶", key="next_month"):
             st.session_state['cal_month'] += 1
@@ -195,11 +225,10 @@ with layout_col1:
                 st.session_state['cal_year'] += 1
             st.rerun()
             
-    # Günlerin Grid Dağılımı
-    days_letters = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+    days_letters = ["Pz", "Sa", "Ça", "Pe", "Cu", "Ct", "Pa"]
     cols_days = st.columns(7)
     for idx, d_let in enumerate(days_letters):
-        cols_days[idx].markdown(f"<p style='text-align:center;font-weight:bold;font-size:10px;margin:0;color:{sub_text};'>{d_let}</p>", unsafe_allow_html=True)
+        cols_days[idx].markdown(f"<p style='text-align:center;font-weight:bold;font-size:9px;margin:0;color:{sub_text};'>{d_let}</p>", unsafe_allow_html=True)
         
     cal_engine = calendar.Calendar(firstweekday=0)
     month_matrix = cal_engine.monthdayscalendar(st.session_state['cal_year'], st.session_state['cal_month'])
@@ -217,7 +246,6 @@ with layout_col1:
                     st.rerun()
 
 with layout_col2:
-    # 👑 KULLANICI İSTEĞİ: TAKVİMİN YANINA SABİT HİPODROM, HAVA DURUMU, PİST ÖLÇÜM VERİ PANELİ
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         hipo_val = "İSTANBUL / SHA TIN REZONANSI" if len(st.session_state['quantum_results']) > 8 else "İSTANBUL MULTI-PİST"
         hava_val = "GÜNEŞLİ / SAHA SICAKLIĞI 28°C"
@@ -227,18 +255,18 @@ with layout_col2:
         hipo_val, hava_val, kum_val, cim_val = "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳"
         
     st.markdown(f"""
-    <div class="quant-card" style="margin-top:12px; height:185px;">
-        <h5 style="margin-top:0; color:#58a6ff; font-size:12px; font-family:monospace;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
-        <p style="margin:5px 0; font-size:11px;">📍 <b>Hipodrom:</b> {hipo_val}</p>
-        <p style="margin:5px 0; font-size:11px;">☁️ <b>Hava Durumu:</b> {hava_val}</p>
-        <p style="margin:5px 0; font-size:11px;">⏳ <b>Kum Pist Ölçümü:</b> {kum_val}</p>
-        <p style="margin:5px 0; font-size:11px;">🏟️ <b>Çim Pist Ölçümü:</b> {cim_val}</p>
+    <div class="quant-card" style="margin-top:5px; height:155px; padding:15px;">
+        <h5 style="margin-top:0; color:#58a6ff; font-size:11px; font-family:monospace;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
+        <p style="margin:3px 0; font-size:11px;">📍 <b>Hipodrom:</b> {hipo_val}</p>
+        <p style="margin:3px 0; font-size:11px;">☁️ <b>Hava Durumu:</b> {hava_val}</p>
+        <p style="margin:3px 0; font-size:11px;">⏳ <b>Kum Pist Ölçümü:</b> {kum_val}</p>
+        <p style="margin:3px 0; font-size:11px;">🏟️ <b>Çim Pist Ölçümü:</b> {cim_val}</p>
     </div>
     """, unsafe_allow_html=True)
 
 st.write("---")
 
-# 📊 SİMETRİK 3+3 NAVİGASYON PANELİ (👑 ÇİFT TIKLAMA HATASI ST.RERUN() İLE EBEDİYEN ÇÖZÜLDÜ)
+# 📊 3+3 NAVİGASYON PANELİ (TEK TIKLAMA AKIŞI ST.RERUN KİLİTLİDİR)
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True):
@@ -384,6 +412,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
+    # CHART.JS DİYAGRAMLARI (TEMA DUYARLI METİN KONFİGÜRASYONU)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     components.html(f"""
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -421,9 +450,11 @@ elif st.session_state['active_menu'] == 'Bülten':
     uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
     pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=120)
     
-    # 3D EMBOSSED NEON TRIGGER BUTTON
-    st.markdown('<div class="trigger-3d">', unsafe_allow_html=True)
-    if st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn"):
+    st.markdown('<div class="trigger-container">', unsafe_allow_html=True)
+    triggered = st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    if triggered:
         final_text = ""
         if uploaded_pdf is not None:
             try:
@@ -473,7 +504,6 @@ elif st.session_state['active_menu'] == 'Bülten':
                 except: pass
             st.success(f"✅ ANALİZ TAMAMLANDI! Veriler Bulut Hafızasına Kilitlendi.")
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # SAYFA: ANALİZ MATRİSİ
 elif st.session_state['active_menu'] == 'Analiz':
@@ -488,7 +518,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -516,7 +546,7 @@ elif st.session_state['active_menu'] == 'Analiz':
                     """, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
-# SAYFA: ANALİZ DETAY (👑 MATRİSİN BİREBİR AYNI ŞABLON KOPYASI)
+# SAYFA: ANALİZ DETAY
 elif st.session_state['active_menu'] == 'Analiz Detay':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
         st.subheader(f"🔬 {date_str} Tarihli Yapay Zeka Seçim Gerekçeleri (Matris Şablon Düzeni)")
@@ -529,7 +559,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f"腔 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -631,7 +661,6 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
-        # 👑 PDF DEVRİMİ: Sınırsız at içeren madalyalı tablolar ve bölünmez son sayfa
         pdf_html = f"""
         <html>
         <head>
@@ -657,7 +686,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
         </style>
         </head>
         <body>
-            <div class="banner"><h1>🏇 Marka: Avelor | Ürün Adı: METRIQX</h1><p>DATE: {date_str} // COGNITIVE QUANTUM ENGINE</p></div>
+            <div class="banner"><h1>🏇 Avelor - METRIQX RAPORU</h1><p>DATE: {date_str} // COGNITIVE QUANTUM ENGINE</p></div>
             <h2>🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Sinerji Sınırları</h2>
         """
         for r in res:
@@ -718,3 +747,6 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                     st.rerun()
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
+
+# 👑 KULLANICI İSTEĞİ: SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
+st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
