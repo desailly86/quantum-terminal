@@ -10,7 +10,7 @@ from pypdf import PdfReader
 from weasyprint import HTML
 
 # SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="AVELOR METRQX v9.6", page_icon="🏇", layout="centered")
+st.set_page_config(page_title="AVELOR METRIQX v9.6", page_icon="🏇", layout="centered")
 
 # 🌓 GÜNDÜZ/GECE MODU SEÇİCİSİ (YAZI OKUNABİLİRLİĞİ %100 OPTİMİZE EDİLDİ)
 st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
@@ -39,7 +39,7 @@ else:
 # PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU EMBOSSED BUTONLAR VE MOBİL MİKRO TAKVİM KALKANI)
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 70px !important; }}
+    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 80px !important; }}
     h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
     h3, h2, h4 {{ color: {text_color} !important; }}
     
@@ -68,7 +68,7 @@ st.markdown(f"""
         box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
     }}
     
-    /* 👑 KULLANICI İSTEĞİ: TAKVİM GRİDİNİ ASLA PATLAMAYACAK ŞEKİLDE MİKRO BOYUTLARA İNDİREN KESKİN CSS SEÇİCİSİ */
+    /* MOBİLDE ASLA PATLAMAYAN MİKRO-ÖLÇEKLİ TAKVİM GRİD CSS KALKANI */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) {{
         gap: 2px !important;
     }}
@@ -162,8 +162,8 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# TAM ASİL BAŞLIK DÜZENİ
-st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRQX</h1>", unsafe_allow_html=True)
+# 👑 KULLANICI İSTEĞİ: YENİLENEN TAM DOĞRU KURUMSAL BAŞLIK DÜZENİ
+st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRIQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
 
@@ -221,7 +221,39 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# MİKRO İNLİNE TAKVİM VE PİST TELEMETRİ ALANI
+# 👑 KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (REPLACE METODLU KESİN ÇÖZÜM)
+clock_raw_js = """
+<div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: CARD_BG; padding: 12px; border-radius: 12px; border: 1px solid BORDER_COLOR; color: TEXT_COLOR;">
+    <div id="js-date" style="font-size: 12px; color: SUBTEXT_COLOR; font-weight: bold; margin-bottom: 2px;">YÜKLENİYOR...</div>
+    <div id="js-clock" style="font-size: 26px; color: #58a6ff; font-weight: bold; font-family: monospace; letter-spacing: 1px;">00:00:00</div>
+    <div id="js-countdown" style="font-size: 11px; color: #238636; font-weight: bold; font-family: monospace; margin-top: 3px; letter-spacing: 0.5px;">KOŞU SAYACI SENKRONİZE EDİLİYOR...</div>
+</div>
+<script>
+function syncTime() {
+    const now = new Date();
+    document.getElementById('js-date').innerText = now.toLocaleDateString('tr-TR', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
+    document.getElementById('js-clock').innerText = now.toLocaleTimeString('tr-TR', {hour12: false});
+    
+    const [targetH, targetM] = "NEXT_RACE_TIME".split(':');
+    const target = new Date();
+    target.setHours(parseInt(targetH), parseInt(targetM), 0);
+    
+    let diff = target - now;
+    if (diff < 0) {
+        document.getElementById('js-countdown').innerText = "⏱️ HEDEF KOŞU (NEXT_RACE_TIME) BAŞLADI / TAMAMLANDI";
+    } else {
+        let m = Math.floor(diff / 60000);
+        let s = Math.floor((diff % 60000) / 1000);
+        document.getElementById('js-countdown').innerText = "⏱️ SONRAKİ GERÇEK KOŞU (NEXT_RACE_TIME) KALAN SÜRE: " + String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
+    }
+}
+setInterval(syncTime, 1000); syncTime();
+</script>
+"""
+clock_final_js = clock_raw_js.replace('CARD_BG', card_bg).replace('BORDER_COLOR', border_color).replace('TEXT_COLOR', text_color).replace('SUBTEXT_COLOR', sub_text).replace('NEXT_RACE_TIME', next_race_time)
+components.html(clock_final_js, height=105)
+
+# MİKRO İNLİNE TAKVİM VE MOBİL UYUMLU TELEMETRİ ALANI
 layout_col1, layout_col2 = st.columns([1.1, 1])
 
 with layout_col1:
@@ -273,19 +305,20 @@ with layout_col2:
     else:
         hipo_val, hava_val, kum_val, cim_val = "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳"
         
+    # 👑 KULLANICI İSTEĞİ: YAZILARI BÜYÜTÜLEN VE MOBİL DIŞINA TAŞMASI ENGELLENEN FLUID KART
     st.markdown(f"""
-    <div class="quant-card" style="margin-top:5px; height:155px; padding:15px; border-color: {border_color};">
-        <h5 style="margin-top:0; color:{accent_color}; font-size:11px; font-family:monospace;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
-        <p style="margin:3px 0; font-size:11px;">📍 <b>Hipodrom:</b> {hipo_val}</p>
-        <p style="margin:3px 0; font-size:11px;">☁️ <b>Hava Durumu:</b> {hava_val}</p>
-        <p style="margin:3px 0; font-size:11px;">⏳ <b>Kum Pist Ölçümü:</b> {kum_val}</p>
-        <p style="margin:3px 0; font-size:11px;">🏟️ <b>Çim Pist Ölçümü:</b> {cim_val}</p>
+    <div class="quant-card" style="margin-top:5px; height:152px; padding:12px; box-sizing: border-box; overflow: hidden;">
+        <h5 style="margin-top:0; color:{accent_color}; font-size: min(13px, 3.5vw); font-family:monospace; margin-bottom: 6px; white-space: nowrap; text-overflow: ellipsis;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
+        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">📍 <b>Hipodrom:</b> {hipo_val}</p>
+        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">☁️ <b>Hava Durumu:</b> {hava_val}</p>
+        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">⏳ <b>Kum Ölçümü:</b> {kum_val}</p>
+        <p style="margin:4px 0; font-size: min(13px, 3.2vw); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">🏟️ <b>Çim Ölçümü:</b> {cim_val}</p>
     </div>
     """, unsafe_allow_html=True)
 
 st.write("---")
 
-# 📊 3+3 NAVİGASYON PANELİ (TEK TIKLAMA AKIŞI ST.RERUN KİLİTLİDİR)
+# 📊 3+3 NAVİGASYON PANELİ
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True):
@@ -431,63 +464,56 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # 👑 %100 KESİNTİSİZ KORUMA ALTINDA OLAN GERÇEKÇİ CHART.JS FINTECH DİYAGRAMLARI (TÜM PARANTEZLER TAMİR EDİLDİ)
+    # 👑 %100 KURŞUN GEÇİRMEZ CHART INJECTION (REPLACE SİSTEMLİ - NAME ERROR EBEDİYEN İMHA EDİLDİ)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
-    components.html(f"""
+    chart_template_js = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <div style="display: flex; flex-direction: column; gap: 20px;">
-        <div><h5 style="color:{sub_text}; margin:0 0 5px 0; font-family:sans-serif; font-size:12px;">📈 ROI & Kasa Büyüme Trend İvmesi</h5><canvas id="ctxRoi" height="60"></canvas></div>
+        <div><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:12px;">📈 ROI & Kasa Büyüme Trend İvmesi</h5><canvas id="ctxRoi" height="60"></canvas></div>
         <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;"><h5 style="color:{sub_text}; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🏟️ Pist Türü Başarı Endeksi</h5><canvas id="ctxPist" height="110"></canvas></div>
-            <div style="flex: 1;"><h5 style="color:{sub_text}; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🍩 Kupon Şablon İsabet Dağıluş Yüzdesi</h5><canvas id="ctxDonut" height="110"></canvas></div>
+            <div style="flex: 1;"><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🏟️ Pist Türü Başarı Endeksi</h5><canvas id="ctxPist" height="110"></canvas></div>
+            <div style="flex: 1;"><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🍩 Kupon Şablon İsabet Dağıluş Yüzdesi</h5><canvas id="ctxDonut" height="110"></canvas></div>
         </div>
     </div>
     <script>
-    new Chart(document.getElementById('ctxRoi'), {{
+    new Chart(document.getElementById('ctxRoi'), {
         type: 'line',
-        data: {{
+        data: {
             labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'],
-            datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}]
-        }},
-        options: {{
+            datasets: [{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }]
+        },
+        options: {
             responsive: true,
-            plugins: {{ legend: {{ display: false }} }},
-            scales: {{ y: {{ ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }}
-        }}
-    }});
-    new Chart(document.getElementById('ctxPist'), {{
+            plugins: { legend: { display: false } },
+            scales: { y: { ticks: { color: 'SUBTEXT_COLOR' } }, x: { ticks: { color: 'SUBTEXT_COLOR' } } }
+        }
+    });
+    new Chart(document.getElementById('ctxPist'), {
         type: 'bar',
-        data: {{
+        data: {
             labels: ['Çim', 'Kum', 'Sentetik'],
-            datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}]
-        }},
-        options: {{
+            datasets: [{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }]
+        },
+        options: {
             responsive: true,
-            plugins: {{ legend: {{ display: false }} }},
-            scales: {{ y: {{ max:100, ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }}
-        }}
-    }});
-    new Chart(document.getElementById('ctxDonut'), {{
+            plugins: { legend: { display: false } },
+            scales: { y: { max:100, ticks: { color: 'SUBTEXT_COLOR' } }, x: { ticks: { color: 'SUBTEXT_COLOR' } } }
+        }
+    });
+    new Chart(document.getElementById('ctxDonut'), {
         type: 'doughnut',
-        data: {{
+        data: {
             labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'],
-            datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}]
-        }},
-        options: {{
+            datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }]
+        },
+        options: {
             responsive: true,
-            plugins: {{
-                legend: {{
-                    position: 'right',
-                    labels: {{
-                        color: '{sub_text}',
-                        font: {{ size: 9 }}
-                    }}
-                }}
-            }}
-        }}
-    }});
+            plugins: { legend: { position: 'right', labels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }
+        }
+    });
     </script>
-    """, height=350)
+    """.replace('SUBTEXT_COLOR', sub_text)
+    components.html(chart_template_js, height=350)
     
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
@@ -564,6 +590,15 @@ elif st.session_state['active_menu'] == 'Bülten':
             st.success(f"✅ ANALİZ TAMAMLANDI! Veriler Bulut Hafızasına Kilitlendi.")
             st.rerun()
 
+    # 👑 KULLANICI İSTEĞİ: SEÇİLEN TAKVİM GÜNÜNDE BÜLTEN VARSA EN ALTTA MATRİS ÖZETİNİ GÖSTERME KORUMASI
+    st.write("---")
+    st.markdown("### 🗂️ Bu Tarihe Ait Mevcut Yüklü Bülten Verileri")
+    if st.session_state['analyzed'] and st.session_state['quantum_results']:
+        st.info(f"✅ Hafıza Dolu: {date_str} tarihine ait bülten matrisi zaten bulutta yüklü durumda. Analiz Matrisi veya Tahmin sekmelerine geçerek tüm kuponları okuyabilirsiniz.")
+        st.markdown(f"**Yüklü Koşu Sayısı:** {len(st.session_state['quantum_results'])} Koşu Dağılımı Aktif")
+    else:
+        st.warning(f"❌ {date_str} tarihine ait herhangi bir yüklü bülten matrisi bulunmuyor. Lütfen yukarıdan bülten enjeksiyonu yapın.")
+
 # SAYFA: ANALİZ MATRİSİ
 elif st.session_state['active_menu'] == 'Analiz':
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -586,23 +621,27 @@ elif st.session_state['active_menu'] == 'Analiz':
                 
                 with col_chart:
                     st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi ve ciğer tork kapasitesi.<br>• <b>Aerodinamik:</b> Kulvar merkezkaç kuvveti sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Bahis manipülasyonu ve ahır istihbarat akışı.</p>", unsafe_allow_html=True)
-                    components.html(f"""
+                    
+                    # f-string Name Error Kalkanı
+                    radar_raw_js = """
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                    <canvas id="radar-{r['race_no']}" height="140"></canvas>
+                    <canvas id="CHART_ID" height="140"></canvas>
                     <script>
-                    new Chart(document.getElementById('radar-{r['race_no']}'), {{
+                    new Chart(document.getElementById('CHART_ID'), {
                         type: 'radar',
-                        data: {{
+                        data: {
                             labels: ['Biyo-Mekanik', 'Aerodinamik', 'Lobi Sinyali'],
                             datasets: [
-                                {{ label: '#{r['horses'][0]['num']}', data: [{r['horses'][0]['bio']}, {r['horses'][0]['aero']}, {r['horses'][0]['lobby']}], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 }},
-                                {{ label: '#{r['horses'][1]['num']}', data: [{r['horses'][1]['bio']}, {r['horses'][1]['aero']}, {r['horses'][1]['lobby']}], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }}
+                                { label: '#H1_NUM', data: [H1_BIO, H1_AERO, H1_LOBBY], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 },
+                                { label: '#H2_NUM', data: [H2_BIO, H2_AERO, H2_LOBBY], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }
                             ]
-                        }},
-                        options: {{ responsive: true, scales: {{ r: {{ grid: {{ color: '#30363d' }}, angleLines: {{ color: '#30363d' }}, ticks: {{ display: false }}, pointLabels: {{ color: '{sub_text}', font: {{ size: 9 }} }} }} }}, plugins: {{ legend: {{ labels: {{ color: '{sub_text}', font: {{ size: 9 }} }} }} }} }}
-                    }});
+                        },
+                        options: { responsive: true, scales: { r: { grid: { color: '#30363d' }, angleLines: { color: '#30363d' }, ticks: { display: false }, pointLabels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }, plugins: { legend: { labels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } } }
+                    });
                     </script>
-                    """, height=160)
+                    """
+                    radar_final_js = radar_raw_js.replace('CHART_ID', f"radar-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('H2_NUM', str(r['horses'][1]['num'])).replace('H2_BIO', str(r['horses'][1]['bio'])).replace('H2_AERO', str(r['horses'][1]['aero'])).replace('H2_LOBBY', str(r['horses'][1]['lobby'])).replace('SUBTEXT_COLOR', sub_text)
+                    components.html(radar_final_js, height=160)
     else: st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden işlem yapın.")
 
 # SAYFA: ANALİZ DETAY
@@ -618,7 +657,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -632,23 +671,27 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
                         """, unsafe_allow_html=True)
                 with col_chart:
                     st.markdown(f"<p style='font-size:10px; color:{sub_text}; line-height:1.2; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi.<br>• <b>Aerodinamik:</b> Sürtünme direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat akışı.</p>", unsafe_allow_html=True)
-                    components.html(f"""
+                    
+                    # f-string Name Error Kalkanı Detay Alanı
+                    radar_det_raw_js = """
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                    <canvas id="radar-detay-{r['race_no']}" height="140"></canvas>
+                    <canvas id="CHART_ID" height="140"></canvas>
                     <script>
-                    new Chart(document.getElementById('radar-detay-{r['race_no']}'), {{
+                    new Chart(document.getElementById('CHART_ID'), {
                         type: 'radar',
-                        data: {{
+                        data: {
                             labels: ['Biyo-Mekanik', 'Aerodinamik', 'Lobi Sinyali'],
                             datasets: [
-                                {{ label: '#{r['horses'][0]['num']}', data: [{r['horses'][0]['bio']}, {r['horses'][0]['aero']}, {r['horses'][0]['lobby']}], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 }},
-                                {{ label: '#{r['horses'][1]['num']}', data: [{r['horses'][1]['bio']}, {r['horses'][1]['aero']}, {r['horses'][1]['lobby']}], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }}
+                                { label: '#H1_NUM', data: [H1_BIO, H1_AERO, H1_LOBBY], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 },
+                                { label: '#H2_NUM', data: [H2_BIO, H2_AERO, H2_LOBBY], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }
                             ]
-                        }},
-                        options: {{ responsive: true, scales: {{ r: {{ grid: {{ color: '#30363d' }}, angleLines: {{ color: '#30363d' }}, ticks: {{ display: false }}, pointLabels: {{ color: '{sub_text}', font: {{ size: 9 }} }} }} }}, plugins: {{ legend: {{ labels: {{ color: '{sub_text}', font: {{ size: 9 }} }} }} }} }}
-                    }});
+                        },
+                        options: { responsive: true, scales: { r: { grid: { color: '#30363d' }, angleLines: { color: '#30363d' }, ticks: { display: false }, pointLabels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }, plugins: { legend: { labels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } } }
+                    });
                     </script>
-                    """, height=160)
+                    """
+                    radar_det_final_js = radar_det_raw_js.replace('CHART_ID', f"radar-detay-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('H2_NUM', str(r['horses'][1]['num'])).replace('H2_BIO', str(r['horses'][1]['bio'])).replace('H2_AERO', str(r['horses'][1]['aero'])).replace('H2_LOBBY', str(r['horses'][1]['lobby'])).replace('SUBTEXT_COLOR', sub_text)
+                    components.html(radar_det_final_js, height=160)
     else: st.info("💡 Gerekçeli detayları görebilmek için önce 'Bülten Yükle' alanından veri yüklemelisiniz.")
 
 # SAYFA: TAHMİN KARTLARI
@@ -720,6 +763,7 @@ elif st.session_state['active_menu'] == 'Tahmin':
             </div>
             """, unsafe_allow_html=True)
             
+        # PDF ÇIKTISI
         pdf_html = f"""
         <html>
         <head>
@@ -807,5 +851,5 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
 
-# SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
+# 👑 KULLANICI İSTEĞİ: TAB SEÇİMLERİNDEN BAĞIMSIZ EN ALTTA KİLİTLİ DURAN GLOBAL PREMIUM FOOTER
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
