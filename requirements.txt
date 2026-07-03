@@ -1,7 +1,0 @@
-streamlit
-pandas
-requests
-pypdf
-weasyprint
-beautifulsoup4
-lxml
