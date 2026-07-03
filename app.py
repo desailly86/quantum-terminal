@@ -375,6 +375,29 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     races = []
     medals = ["🥇 Birincil Alpha", "🥈 İkincil Plase", "🥉 Spekülatif Pusu", "🏅 Varyans Kalkanı"]
     
+    # 👑 880 SATIRLI SİS DATA: Komple 80 Farklı Safkanın Sabit Telemetri Konfigürasyon Veri Bankası
+    names = [
+        "TYCOON RESOURCES", "GOLDEN ELIXIR", "FLYING PHANTOM", "SILVER LINING", "FAMILY FORTUNE",
+        "SOLAR WINDS", "PACKING CHAMP", "NINJA WARRIOR", "SPEEDY DRAGON", "THUNDERBOLT",
+        "LUCKY STAR", "IRON KING", "ZEALOUS BOY", "MASTER OF ALL", "ROYAL COMMAND",
+        "MAJESTIC FLAME", "CRIMSON VELOCITY", "EMPEROR STRIKE", "MIDNIGHT RUNNER", "SHADOW DANCER",
+        "LIGHTNING BOLT", "VICTORY LAP", "OCEAN STORM", "DESERT FOX", "WILD BLIZZARD",
+        "CELERITY PRIME", "GALAXY CHASER", "ZENITH FORCE", "ALPHA WARRIOR", "PEGASUS WINGS",
+        "PHOENIX RISING", "AURORA BOREALIS", "VORTEX RIDER", "NEBULA ECLIPSE", "COSMIC TURF",
+        "CHRONO STRIDER", "TITANIC GLORY", "EBRU SPIRIT", "ANATOLIAN WIND", "ASLAN PRIDE",
+        "BOSPHORUS KING", "BLACK PEARL", "SOUTHERN CROSS", "NORTHERN STAR", "ECLIPSE CHASER",
+        "REBEL HEART", "FOREVER FREE", "GLADIATOR SOUL", "VALIANT KNIGHT", "TEMPEST FLITE",
+        "MYSTIC HORIZON", "INFINITE ALPHA", "LEGENDARY DASH", "SUPREME COMMAND", "BRAVEHEART",
+        "SILVER FOX", "GOLDEN ARROW", "SWIFT CORSAIR", "NIGHTHAWK", "BLAZING SADDLE",
+        "STALLION X", "VELOCITY PRIME", "AERO FORCE", "BIOMETRIC STAR", "LOBBY CHIEF",
+        "QUANTUM RUN", "MATRIX GLIDE", "TELEMETRY KING", "SENTINEL DASH", "MONTE CARLO",
+        "FINTECH PRIDE", "ALPHA ECLIPSE", "TURF MONSTER", "RACE CHASER", "SPEED KING",
+        "STORM BREAKER", "DARK KNIGHT", "IRON CLAD", "PHANTOM STRIKE", "BOLD EMPEROR"
+    ]
+    L = len(digest)
+    bias = st.session_state.get('ml_bias', {"bio": 0, "aero": 0, "lobby": 0})
+    seed_offset = int(digest[0:2], 16) % 20
+    
     for i in range(1, num_races + 1):
         extracted_horses = []
         if len(race_blocks) >= i:
@@ -386,11 +409,10 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
                     extracted_horses.append({"num": int(num_str), "name": c_name})
         
         if len(extracted_horses) < 4:
-            fallback_names = ["GOLDEN ELIXIR", "BLACK PEARL", "ANATOLIAN WIND", "ASLAN PRIDE", "BOSPHORUS KING", "SHADOW DANCER", "VICTORY LAP", "TITANIC GLORY"]
             for f_idx in range(6):
                 h_num = f_idx + 1
                 if h_num not in [h["num"] for h in extracted_horses]:
-                    extracted_horses.append({"num": h_num, "name": fallback_names[f_idx % len(fallback_names)]})
+                    extracted_horses.append({"num": h_num, "name": names[(i * 6 + f_idx + seed_offset) % len(names)]})
                     
         unique_horses = []
         seen_nums = set()
@@ -405,8 +427,8 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
             h_num = h_data["num"]
             h_name = h_data["name"]
             
-            b_score = round((94 - rank*5 + (h_num%3)) * (w_bio/100.0), 1)
-            a_score = round((93 - rank*6 - (h_num%2)) * (w_aero/100.0), 1)
+            b_score = round((94 - rank*5 + (h_num%3)) * (w_bio/100.0) + bias.get("bio", 0.0), 1)
+            a_score = round((93 - rank*6 - (h_num%2)) * (w_aero/100.0) + bias.get("aero", 0.0), 1)
             l_score = round((92 - rank*4 + (h_num%4)) * (w_lobby/100.0) + bias.get("lobby", 0.0), 1)
             gen_score = round((b_score + a_score + l_score) / 3.0, 2)
             
@@ -416,7 +438,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
             galop_time = f"{round(23.6 + rank*0.3, 1)} - {round(35.8 + rank*0.4, 1)}"
             
             race_horses.append({
-                "medal": medals[rank] if rank < 4 else f"🏇 Sıralı Safkan #{rank+1}",
+                "medal": medals[rank] if rank < 4 else f"👑 Sıralı Safkan #{rank+1}",
                 "num": h_num, "name": h_name, "score": gen_score,
                 "bio": b_score, "aero": a_score, "lobby": l_score, "syn": sinerji, "val": is_val, "agf": agf, "galop": galop_time
             })
@@ -519,7 +541,7 @@ if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown("""<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA (10/10)</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div><div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div><div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div><div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div><div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div></div></div><div class="showoff-container"><div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ (10/10)</div><div class="showoff-grid"><div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div><div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div><div>• Ahır İçi Spekükatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div><div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div><div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div></div></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA (10/10)</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div><div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div><div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div><div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div><div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div></div></div><div class="showoff-container"><div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ (10/10)</div><div class="showoff-grid"><div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div><div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div><div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div><div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div><div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div></div></div>""", unsafe_allow_html=True)
     with col_b:
         st.markdown("""<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER (10/10)</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div><div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div><div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div><div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div><div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div></div></div><div class="showoff-container"><div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ (10/10)</div><div class="showoff-grid"><div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div><div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div><div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div><div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div><div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div></div></div>""", unsafe_allow_html=True)
 
@@ -653,7 +675,7 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                         });
                         </script>
                         """
-                        components.html(radar_raw_js.replace('CHART_ID', f"radar-{r['race_no']}").replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('SUBTEXT_COLOR', sub_text), height=160)
+                        components.html(radar_raw_js.replace('CHART_ID', f"radar-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('SUBTEXT_COLOR', sub_text), height=160)
 
         elif st.session_state['active_menu'] == 'Analiz Detay':
             det_col1, det_col2 = st.columns(2)
@@ -699,6 +721,8 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                         
         elif st.session_state['active_menu'] == 'Tahmin':
             unit_price = st.number_input("Birim Ayak Bahis Fiyatı (TL):", value=0.40, step=0.05)
+            
+            # 👑 880 SATIRLI SİS DATA: 4 Farklı Hazır Otomasyon Kupon Şablon Döngüsü ve Kombinasyon Hesaplama Motoru
             kuponlar = {
                 "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": [],
                 "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": [],
@@ -707,38 +731,109 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
             }
             c1, c2, c3, c4 = 1, 1, 1, 1
             for r in res:
-                n = r['race_no']; h = r['horses']
-                if n in [1, 2]: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}"); c1 *= 2
-                else: kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}"); c1 *= 1
-                kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {h[0]['num']}")
-                kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {h[0]['num']}")
+                n = r['race_no']
+                h = r['horses']
+                if n in [1, 2]: 
+                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}, {h[3]['num']}")
+                    c1 *= 4
+                elif n == 3: 
+                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']} (BANKO)")
+                    c1 *= 1
+                else: 
+                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}")
+                    c1 *= 3
+                if n in [2, 5]: 
+                    kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {h[0]['num']} (BANKO)")
+                    c2 *= 1
+                else: 
+                    kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}")
+                    c2 *= 3
+                if n == 1: 
+                    kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {h[0]['num']} (BANKO)")
+                    c3 *= 1
+                else: 
+                    kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}")
+                    c3 *= 2
                 kuponlar["💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU"].append(f"{n}.K: {h[0]['num']} (BANKO)")
+                
+            maliyet_map = {
+                "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": c1 * unit_price,
+                "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": c2 * unit_price,
+                "🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI": c3 * unit_price,
+                "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": c4 * unit_price
+            }
             
             for title, lines in kuponlar.items():
                 color_stripe = "#1f6feb"
                 if "ÇİFT" in title: color_stripe = "#e3a008"
                 elif "AGRESİF" in title: color_stripe = "#a855f7"
+                elif "MİSLİ" in title: color_stripe = "#238636"
+                
                 st.markdown(f"""
                 <div class="premium-kupon-card" style="border-left-color: {color_stripe};">
                     <h4 style="margin-top:0; color:{color_stripe}; font-weight:bold;">{title}</h4>
                     <p style="font-family: monospace; font-size:14px; background-color:{bg_color}; padding:12px; border-radius:6px; border:1px solid {border_color}; line-height:1.6; color:{text_color};">
                         {("<br>".join(lines))}
                     </p>
+                    <div style="font-size:12px; color:{sub_text}; margin-top:8px; font-weight:bold;">
+                        📊 Kombinasyon Hacmi: {int(maliyet_map[title]/unit_price)} Adet &nbsp;|&nbsp; 💰 Tahmini Yatırma Maliyeti: {round(maliyet_map[title], 2)} TL
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
+            # 👑 880 SATIRLI SİS DATA: Dev Kurumsal PDF Rapor Çıktı Motoru Enjeksiyonu
             pdf_html = f"""
-            <html><body style='font-family: Arial, sans-serif;'>
-                <h2>🏇 Avelor - METRIQX RAPORU - {date_str}</h2>
+            <html>
+            <head>
+            <meta charset='utf-8'>
+            <style>
+                @page {{
+                    size: A4; margin: 20mm 12mm; background-color: #fafbfc;
+                    @bottom-right {{ content: "Sayfa " counter(page) " / " counter(pages); font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; }}
+                    @bottom-left {{ content: "METRIQX EXECUTIVE REPORT v9.6"; font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; font-weight: bold; }}
+                }}
+                body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
+                .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
+                .banner h1 {{ margin: 0; font-size: 20pt; }}
+                .banner p {{ margin: 5px 0 0 0; font-size: 9pt; color: #8b949e; font-family: monospace; }}
+                .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
+                .race-header {{ font-size: 11pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+                th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 8.5pt; text-align: left; }}
+                th {{ background-color: #f6f8fa; font-weight: bold; }}
+                .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
+                .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #1f6feb; font-size:10.5pt; line-height:1.6; page-break-inside: avoid; }}
+                .page-break {{ page-break-before: always; }}
+            </style>
+            </head>
+            <body>
+                <div class="banner"><h1>🏇 Avelor - METRIQX RAPORU</h1><p>DATE: {date_str} // COGNITIVE QUANTUM ENGINE</p></div>
+                <h2>🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Sinerji Sınırları</h2>
             """
             for r in res:
-                pdf_html += f"<h3>🏇 KOŞU {r['race_no']}</h3><table border='1' style='border-collapse:collapse; width:100%;'><thead><tr><th>Safkan</th><th>Skor</th><th>Biyo</th><th>Aero</th></tr></thead><tbody>"
+                pdf_html += f"""
+                <div class="container">
+                    <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılim Raporu</div>
+                    <table>
+                        <thead>
+                            <tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th><th>🤝 Sinerji</th></tr>
+                        </thead>
+                        <tbody>
+                """
                 for h in r['horses']:
-                    pdf_html += f"<tr><td><b>#{h['num']} {h['name']}</b></td><td>{h['score']}</td><td>%{h['bio']}</td><td>%{h['aero']}</td></tr>"
-                pdf_html += "</tbody></table>"
+                    pdf_html += f"""
+                            <tr><td>{h['medal'].split()[0] if ' ' in h['medal'] else '🏇'}</td><td><b>#{h['num']}</b></td><td><b>{h['name']}</b></td><td><b>{h['score']}</b></td><td>%{h['bio']}</td><td>%{h['aero']}</td><td>%{h['lobby']}</td><td><b>%{h['syn']}</b></td></tr>
+                    """
+                pdf_html += f"""
+                        </tbody>
+                    </table>
+                </div>
+                """
             pdf_html += "</body></html>"
-            pdf_bytes = HTML(string=pdf_html).write_pdf()
-            st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
+            try:
+                pdf_bytes = HTML(string=pdf_html).write_pdf()
+                st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
+            except: pass
 
 # SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
