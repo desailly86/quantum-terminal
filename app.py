@@ -206,10 +206,14 @@ if st.session_state['loaded_date'] != date_str:
     st.session_state['analyzed'] = False
     st.session_state['quantum_results'] = []
     st.session_state['past_results_text'] = ""
-    
+    # DÜZELTME: loaded_date her koşulda güncellenmeli. Eskiden sadece API_URL doluysa
+    # ve istek başarılıysa güncelleniyordu; API_URL boşken her rerun'da sonuçlar siliniyordu.
+    st.session_state['loaded_date'] = date_str
+
     if API_URL:
         try:
-            response = requests.get(API_URL)
+            response = requests.get(API_URL, timeout=10)
+            response.raise_for_status()
             hist = response.json()
             
             sapma_listes = [row.get("Sapma_Nedeni", "") for row in hist if row.get("Sapma_Nedeni")]
@@ -227,8 +231,8 @@ if st.session_state['loaded_date'] != date_str:
                         st.session_state['analyzed'] = True
                     elif row.get("Kosu_No") == "TOPLU":
                         st.session_state['past_results_text'] = row.get("Detay", "")
-            st.session_state['loaded_date'] = date_str
-        except: pass
+        except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
+            st.sidebar.warning(f"⚠️ Bulut arşivine ulaşılamadı: {e}")
 
 # SAFKAN SAYAÇ KÖPRÜSÜ
 if 'quantum_results' in st.session_state and st.session_state['quantum_results']:
@@ -371,6 +375,12 @@ st.write("---")
 def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
     blocks = re.split(r'(?i)(?:koşu|kosu|race|class\s+\d)', text_input)
     race_blocks = [b for b in blocks if len(b.strip()) > 30]
+
+    # DÜZELTME: Koşu sayısı 8'e sabitlenmişti. Bültenden gerçek koşu sayısını tespit et,
+    # tespit edilemezse verilen değere geri dön (1-12 aralığında sınırla).
+    detected = len(race_blocks)
+    if 1 <= detected <= 12:
+        num_races = detected
     
     races = []
     medals = ["🥇 Birincil Alpha", "🥈 İkincil Plase", "🥉 Spekülatif Pusu", "🏅 Varyans Kalkanı"]
@@ -394,7 +404,8 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
         "FINTECH PRIDE", "ALPHA ECLIPSE", "TURF MONSTER", "RACE CHASER", "SPEED KING",
         "STORM BREAKER", "DARK KNIGHT", "IRON CLAD", "PHANTOM STRIKE", "BOLD EMPEROR"
     ]
-    L = len(digest)
+    # DÜZELTME: 'digest' tanımlanmadan kullanılıyordu -> NameError ile uygulama çöküyordu.
+    digest = hashlib.md5(text_input.encode("utf-8", errors="ignore")).hexdigest()
     bias = st.session_state.get('ml_bias', {"bio": 0, "aero": 0, "lobby": 0})
     seed_offset = int(digest[0:2], 16) % 20
     
@@ -402,7 +413,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
         extracted_horses = []
         if len(race_blocks) >= i:
             current_block = race_blocks[i-1]
-            raw_finds = re.findall(r'(\d+)\s*[-./.]\s*([A-ZÇĞİÖŞÜ\s]{3,22})', current_block)
+            raw_finds = re.findall(r'(\d+)\s*[-./]\s*([A-ZÇĞİÖŞÜ\s]{3,22})', current_block)
             for num_str, name_str in raw_finds:
                 c_name = name_str.strip()
                 if len(c_name) > 3 and not any(x in c_name for x in ["KG", "DB", "SK", "GÜN", "TL", "KOŞU"]):
@@ -568,8 +579,11 @@ elif st.session_state['active_menu'] == 'Bülten':
         if uploaded_pdf is not None:
             try:
                 reader = PdfReader(uploaded_pdf)
-                final_text = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
-            except: pass
+                final_text = "".join([page.extract_text() or "" for page in reader.pages])
+                if not final_text.strip():
+                    st.error("❌ PDF'ten metin çıkarılamadı. Taranmış (görüntü) PDF olabilir; metni elle yapıştırmayı deneyin.")
+            except Exception as e:
+                st.error(f"❌ PDF okunamadı: {e}")
         elif pasted_text.strip(): final_text = pasted_text
             
         if final_text.strip():
@@ -610,9 +624,15 @@ elif st.session_state['active_menu'] == 'Bülten':
             res_data = run_quantum_core(final_text, 8, w_bio, w_aero, w_lobby, w_atmos)
             st.session_state['quantum_results'] = res_data
             st.session_state['analyzed'] = True
+            # DÜZELTME: Analiz farklı bir tarihe (bültenden okunan) kaydedilse bile
+            # ekranda seçili tarihle senkron kalması için seçili tarihi de güncelle.
+            st.session_state['selected_date_str'] = target_date
+            st.session_state['loaded_date'] = target_date
             if API_URL:
-                try: requests.post(API_URL, json={"Tarih": target_date, "Kosu_No": "BÜLTEN_DATA", "Gelen_At": "SYSTEM", "Detay": json.dumps(res_data)})
-                except: pass
+                try:
+                    requests.post(API_URL, json={"Tarih": target_date, "Kosu_No": "BÜLTEN_DATA", "Gelen_At": "SYSTEM", "Detay": json.dumps(res_data)}, timeout=10)
+                except requests.RequestException as e:
+                    st.warning(f"⚠️ Bulut arşivine kaydedilemedi (analiz yerelde duruyor): {e}")
             st.rerun()
 
     st.write("---")
@@ -629,7 +649,7 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
         if API_URL:
             payload = {"Tarih": date_str, "Kosu_No": "TOPLU", "Gelen_At": "SIRALAMA", "Sapma_Nedeni": "MANUAL_INJECT", "Detay": bulk_data}
             try:
-                requests.post(API_URL, json=payload)
+                requests.post(API_URL, json=payload, timeout=10)
                 st.success("🎯 Sonuçlar kalıcı hafızaya kilitlendi! Sayfa yenileniyor...")
                 time.sleep(1)
                 st.session_state['loaded_date'] = ""
@@ -651,7 +671,7 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                 
             for r in res:
                 val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-                with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+                with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                     col_text, col_chart = st.columns([1.2, 1])
                     with col_text:
                         for h in r['horses']:
@@ -686,7 +706,7 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                 
             for r in res:
                 val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-                with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+                with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                     top_c1, top_c2 = st.columns([1, 1.2])
                     with top_c1:
                         st.markdown(f"<p style='font-size:11px; color:{sub_text}; line-height:1.3; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi torku.<br>• <b>Aerodinamik:</b> Sürtünme ve drag direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat network akışı.</p>", unsafe_allow_html=True)
@@ -833,7 +853,8 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
             try:
                 pdf_bytes = HTML(string=pdf_html).write_pdf()
                 st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
-            except: pass
+            except Exception as e:
+                st.error(f"❌ PDF raporu üretilemedi (WeasyPrint hatası): {e}")
 
 # SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
