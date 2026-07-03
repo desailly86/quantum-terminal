@@ -140,7 +140,7 @@ def run_quantum_core(text_input, num_races):
 
 # ==================== MENÜ İÇERİKLERİ ====================
 
-# 1. SAYFA: DASHBOARD (AKILLI MOBİL AKIŞ VE NUMARASIZ PROTOKOLLER)
+# 1. SAYFA: DASHBOARD
 if st.session_state['active_menu'] == 'Dashboard':
     st.subheader("📊 Model Geçmiş Performans ve Kararlılık Trendi")
     if API_URL:
@@ -162,7 +162,6 @@ if st.session_state['active_menu'] == 'Dashboard':
         except: st.warning("Veri tabanı canlı grafikleri senkronize ediliyor.")
     else: st.error("API_URL tanımlanmamış.")
 
-    # RAKAMLARI SİLİNMİŞ VE DİKEY MOBİL AKIŞA TAM UYUMLU ŞOV ALANI
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
     st.caption("Bülten analiz edilirken arka planda eşzamanlı işletilen 40 stratejik kriter şebekesi:")
@@ -261,7 +260,7 @@ elif st.session_state['active_menu'] == 'Analiz':
     if 'analyzed' in st.session_state:
         st.subheader(f"🔬 {st.session_state['num_races']} Koşunun Derin Dağılımları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f"% 🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
+            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
                 st.markdown(f"""
                 🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio1']} | 🌪️ Aerodinamik: %{r['aero1']} | 🕸️ Lobi: %{r['lobby1']}</div>
                 🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio2']} | 🌪️ Aerodinamik: %{r['aero2']} | 🕸️ Lobi: %{r['lobby2']}</div>
@@ -271,12 +270,13 @@ elif st.session_state['active_menu'] == 'Analiz':
                 """, unsafe_allow_html=True)
     else: st.info("💡 Lütfen önce 'Bülten' sekmesinden yükleme yapıp motoru tetikleyin.")
 
-# 4. SAYFA: TAHMİN
+# 4. SAYFA: TAHMİN (ULTRALÜKS VE GÖRSEL PDF ÇIKTI MOTORLU NİHAİ ALAN)
 elif st.session_state['active_menu'] == 'Tahmin':
     if 'analyzed' in st.session_state:
         res = st.session_state['quantum_results']
         n_races = st.session_state['num_races']
         st.subheader(f"🎟️ Tüm {n_races} Koşu İçin Satır Satır Kupon Şablonları")
+        
         k1_lines, k2_lines, k3_lines = [], [], []
         for r in res:
             k1_lines.append(f"{r['race_no']}. KOŞU: {r['h1']}, {r['h2']}, {r['h3']}")
@@ -290,11 +290,110 @@ elif st.session_state['active_menu'] == 'Tahmin':
         st.markdown("### 💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU")
         st.code("\n".join(k3_lines), language="text")
         
-        pdf_html = f"<html><body><h2>🌌 QUANTUM REPORT - TOTAL {n_races} RACES</h2>"
-        for r in res: pdf_html += f"<h3>🏇 KOŞU {r['race_no']}</h3><p>#{r['h1']} ({r['score1']}) // #{r['h2']} ({r['score2']})</p>"
-        pdf_html += f"<h2 style='page-break-before:always;'>🎟️ KUPONLAR</h2><pre>{chr(10).join(k1_lines)}</pre></body></html>"
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        st.download_button(label="📥 SON SAYFA KORUMALI PREMIUM PDF TAHMİN RAPORUNU İNDİR", data=pdf_bytes, file_name="quantum_report.pdf", mime="application/pdf")
+        # 👑 REKOR SEVİYEDE GÖRSEL VE ZENGİN WEASYPRINT PREMIUM PDF MİZANPAJI
+        pdf_html = f"""
+        <html>
+        <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: A4;
+                margin: 20mm 12mm;
+                background-color: #fafbfc;
+                @bottom-right {{
+                    content: "Sayfa " counter(page) " / " counter(pages);
+                    font-size: 8pt;
+                    color: #8b949e;
+                    font-family: Arial, sans-serif;
+                }}
+                @bottom-left {{
+                    content: "METRIQX EXECUTIVE INTEL REPORT v6.6";
+                    font-size: 8pt;
+                    color: #8b949e;
+                    font-family: Arial, sans-serif;
+                    font-weight: bold;
+                }}
+            }}
+            body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
+            .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
+            .banner h1 {{ margin: 0; font-size: 20pt; letter-spacing: 0.5px; }}
+            .banner p {{ margin: 5px 0 0 0; font-size: 9pt; color: #8b949e; font-family: monospace; }}
+            .container {{ background: white; border: 1px solid #d0d7de; padding: 18px; margin-bottom: 25px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
+            .race-header {{ font-size: 12pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 12px; }}
+            th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 9pt; text-align: left; }}
+            th {{ background-color: #f6f8fa; font-weight: bold; color: #24292e; }}
+            .bet-summary {{ font-size: 9pt; background-color: #f6f8fa; padding: 10px; border-radius: 6px; border-left: 4px solid #58a6ff; margin-top: 10px; }}
+            .page-break {{ page-break-before: always; }}
+            .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
+            .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; font-size: 10.5pt; line-height: 1.6; margin-bottom: 20px; border-left: 5px solid #1f6feb; }}
+        </style>
+        </head>
+        <body>
+            <div class="banner">
+                <h1>🏇 METRIQX: EQUINE QUANTUM TELEMETRY</h1>
+                <p>CORE-40 MATRIX REAL-TIME ANALYSIS // PRECONSTRUCTED EXECUTIVE REPORT</p>
+            </div>
+            <h2 style="font-size: 14pt; color: #0d1117; margin-bottom: 20px;">🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Tüm Bahis Seçenekleri</h2>
+        """
+        
+        for r in res:
+            pdf_html += f"""
+            <div class="container">
+                <div class="race-header">🏇 KOŞU {r['race_no']} - Derin Metrik Analiz Matrisi</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">Sıra</th>
+                            <th style="width: 10%;">At No</th>
+                            <th style="width: 32%;">Safkan İsmi</th>
+                            <th style="width: 13%;">Genel Puan</th>
+                            <th style="width: 12%;">Biyo-Mek.</th>
+                            <th style="width: 13%;">Aerodin.</th>
+                            <th style="width: 12%;">Lobi F.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>🥇</td><td><b>#{r['h1']}</b></td><td><b>{r['name1']}</b></td><td><b>{r['score1']}</b></td><td>%{r['bio1']}</td><td>%{r['aero1']}</td><td>%{r['lobby1']}</td></tr>
+                        <tr><td>🥈</td><td>#{r['h2']}</td><td>{r['name2']}</td><td>{r['score2']}</td><td>%{r['bio2']}</td><td>%{r['aero2']}</td><td>%{r['lobby2']}</td></tr>
+                        <tr><td>🥉</td><td>#{r['h3']}</td><td>{r['name3']}</td><td>{r['score3']}</td><td>%{r['bio3']}</td><td>%{r['aero3']}</td><td>%{r['lobby3']}</td></tr>
+                        <tr><td>🏅</td><td>#{r['h4']}</td><td>{r['name4']}</td><td>{r['score4']}</td><td>%{r['bio4']}</td><td>%{r['aero4']}</td><td>%{r['lobby4']}</td></tr>
+                    </tbody>
+                </table>
+                <div class="bet-summary">
+                    <b>🎯 Önerilen Bahis Kombinasyonu:</b><br>
+                    • Ganyan: #{r['h1']} &nbsp;|&nbsp; • Plase/İkili: {r['h1']} - {r['h2']} &nbsp;|&nbsp; • Sıralı İkili: {r['h1']} // {r['h2']} &nbsp;|&nbsp; • Sıralı Üçlü/Tabela: {r['h1']} // {r['h2']} // {r['h3']} // {r['h4']}
+                </div>
+            </div>
+            """
+            
+        # KUPONLARIN KESİNTİSİZ SON SAYFAYA KİLİTLENMESİ VE SATIR SATIR RENKLİ YERLEŞİMİ
+        pdf_html += f"""
+            <div class="page-break">
+                <h2 style="font-size: 14pt; color: #0d1117; border-bottom: 2px solid #0d1117; padding-bottom: 5px;">🎟️ Kademeli Sündika Otomasyonu Hazır Kombinasyonları</h2>
+                
+                <div class="kupon-title">📈 1. DENGELİ SÜNDİKA ŞABLONU (Geniş Varyans)</div>
+                <div class="kupon-box">
+                    {("<br>".join(k1_lines))}
+                </div>
+                
+                <div class="kupon-title">⚡ 2. ORTA DÜZEY RİSK ŞABLONU (Dengeli Varyans)</div>
+                <div class="kupon-box" style="border-left-color: #e3a008;">
+                    {("<br>".join(k2_lines))}
+                </div>
+
+                <div class="kupon-title">💰 3. MİSLİ / KAZANÇ ARBİTRAJ ŞABLONU (Agresif Alpha)</div>
+                <div class="kupon-box" style="border-left-color: #238636;">
+                    {("<br>".join(k3_lines))}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        with st.spinner("⏳ Üst Düzey Yönetici PDF Raporu Derleniyor..."):
+            pdf_bytes = HTML(string=pdf_html).write_pdf()
+            st.download_button(label="📥 SON SAYFA KORUMALI PREMIUM PDF TAHMİN RAPORUNU İNDİR", data=pdf_bytes, file_name="quantum_extended_report.pdf", mime="application/pdf")
     else: st.info("💡 Rapor ve kupon üretimi için önce 'Bülten' alanından veri yüklemelisiniz.")
 
 # 5. SAYFA: YARIŞ SONUÇLARI
