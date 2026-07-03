@@ -7,13 +7,21 @@ import re
 from pypdf import PdfReader
 from weasyprint import HTML
 
-# SİSTEM KONFİGÜRASYONU (YENİ İSİM VE LOGO)
-st.set_page_config(page_title="METRIQX v6.5", page_icon="🏇", layout="centered")
+# SİSTEM KONFİGÜRASYONU
+st.set_page_config(page_title="METRIQX v6.6", page_icon="🏇", layout="centered")
 
-# PREMIUM EXECUTIVE CSS ARAYÜZÜ (3+2 GRID & ŞOV LOGLARI UYUMLU)
+# PREMIUM EXECUTIVE CSS ARAYÜZÜ (MOBİL TEK SATIR BAŞLIK & NUMARASIZ SÜTUN UYUMU)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #c9d1d9; }
+    
+    /* Başlığın Mobilde Tek Satıra Sığması İçin Akıllı Ölçeklendirme */
+    h1 {
+        font-size: min(22px, 5.2vw) !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+        letter-spacing: -0.5px;
+    }
     
     /* 3+2 Mobil Grid Navigasyon Optimizasyonu */
     .stButton>button { 
@@ -44,20 +52,20 @@ st.markdown("""
     
     /* Şov Alanı: 40 Kriter Premium Kutuları */
     .showoff-container {
-        border: 1px dashed #30363d;
+        border: 1px solid #30363d;
         padding: 20px;
         border-radius: 12px;
-        background-color: #0d1117;
-        margin-top: 30px;
+        background-color: #161b22;
+        margin-top: 20px;
     }
-    .showoff-title { font-size: 14px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 10px; }
-    .showoff-grid { display: grid; grid-template-columns: 1fr; gap: 10px; font-size: 12px; font-family: monospace; color: #8b949e; }
+    .showoff-title { font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+    .showoff-grid { display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 11px; font-family: monospace; color: #8b949e; }
     @media (min-width: 600px) { .showoff-grid { grid-template-columns: 1fr 1fr; } }
     </style>
     """, unsafe_allow_html=True)
 
-# YENİ HAVALI BAŞLIK
-st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v6.5")
+# ANA BAŞLIK
+st.title("🏇 METRIQX: EQUINE QUANTUM TELEMETRY v6.6")
 
 # CANLI TELEMETRİ PANELİ
 t_col1, t_col2, t_col3 = st.columns(3)
@@ -67,11 +75,11 @@ t_col3.markdown('<div class="telemetry-badge">⚡ DEPLOY: PRODUCTION</div>', uns
 
 st.write("---")
 
-# 🧠 DURUM TABANLI NAVİGASYON HAFIZASI (VARSAYILAN: DASHBOARD AYARLANDI)
+# DURUM TABANLI NAVİGASYON HAFIZASI
 if 'active_menu' not in st.session_state:
     st.session_state['active_menu'] = 'Dashboard'
 
-# 📊 NAVİGASYON PANELİ GRİD YAPISI (3 ÜSTTE - 2 ALTTA)
+# NAVİGASYON PANELİ GRİD YAPISI (3 ÜSTTE - 2 ALTTA)
 m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
 with m_row1_col1:
     type_dash = "primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary"
@@ -130,9 +138,9 @@ def run_quantum_core(text_input, num_races):
         })
     return races
 
-# ==================== MENÜ SEÇENEKLERİ VE SAYFA İÇERİKLERİ ====================
+# ==================== MENÜ İÇERİKLERİ ====================
 
-# 1. SAYFA: DASHBOARD (AÇILIŞ SAYFASI OYUN PLANI + BÜYÜK ŞOV)
+# 1. SAYFA: DASHBOARD (AKILLI MOBİL AKIŞ VE NUMARASIZ PROTOKOLLER)
 if st.session_state['active_menu'] == 'Dashboard':
     st.subheader("📊 Model Geçmiş Performans ve Kararlılık Trendi")
     if API_URL:
@@ -151,19 +159,19 @@ if st.session_state['active_menu'] == 'Dashboard':
             else:
                 mock_data = pd.DataFrame({"Gün": ["1. Gün", "2. Gün", "3. Gün", "4. Gün"], "Güven Endeksi": [88, 91, 94, 96]})
                 st.line_chart(data=mock_data, x="Gün", y="Güven Endeksi")
-        except: st.warning("Veri tabanından canlı grafikler yüklenirken gecikme yaşandı.")
+        except: st.warning("Veri tabanı canlı grafikleri senkronize ediliyor.")
     else: st.error("API_URL tanımlanmamış.")
 
-    # 👑 NİHAİ ŞOV ALANI: 40 KRİTER MATRİS PROTOKOLLERİ
+    # RAKAMLARI SİLİNMİŞ VE DİKEY MOBİL AKIŞA TAM UYUMLU ŞOV ALANI
     st.write("---")
     st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
-    st.caption("Bülten PDF katmanları ayrıştırılırken arka planda eşzamanlı işletilen 40 stratejik kriter şebekesi:")
+    st.caption("Bülten analiz edilirken arka planda eşzamanlı işletilen 40 stratejik kriter şebekesi:")
     
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("""
         <div class="showoff-container">
-            <div class="showoff-title">🛡️ PILLAR 1: BİYO-MEKANİK & HÜCRESEL DATA</div>
+            <div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA</div>
             <div class="showoff-grid">
                 <div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div>
                 <div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div>
@@ -173,7 +181,7 @@ if st.session_state['active_menu'] == 'Dashboard':
             </div>
         </div>
         <div class="showoff-container">
-            <div class="showoff-title">🕸️ PILLAR 3: NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ</div>
+            <div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ</div>
             <div class="showoff-grid">
                 <div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div>
                 <div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div>
@@ -186,9 +194,9 @@ if st.session_state['active_menu'] == 'Dashboard':
     with col_b:
         st.markdown("""
         <div class="showoff-container">
-            <div class="showoff-title">🌪️ PILLAR 2: AERODİNAMİK & VEKTÖREL DİNAMİKLER</div>
+            <div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER</div>
             <div class="showoff-grid">
-                <div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Avantajı</div>
+                <div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div>
                 <div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div>
                 <div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div>
                 <div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div>
@@ -196,7 +204,7 @@ if st.session_state['active_menu'] == 'Dashboard':
             </div>
         </div>
         <div class="showoff-container">
-            <div class="showoff-title">📡 PILLAR 4: ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ</div>
+            <div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ</div>
             <div class="showoff-grid">
                 <div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div>
                 <div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div>
@@ -253,7 +261,7 @@ elif st.session_state['active_menu'] == 'Analiz':
     if 'analyzed' in st.session_state:
         st.subheader(f"🔬 {st.session_state['num_races']} Koşunun Derin Dağılımları")
         for r in st.session_state['quantum_results']:
-            with st.expander(f"🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
+            with st.expander(f"% 🏇 KOŞU {r['race_no']} - 40 Kriter Derin Metrik Analiz Raporu", expanded=True):
                 st.markdown(f"""
                 🥇 **#{r['h1']} {r['name1']} (Skor: {r['score1']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio1']} | 🌪️ Aerodinamik: %{r['aero1']} | 🕸️ Lobi: %{r['lobby1']}</div>
                 🥈 **#{r['h2']} {r['name2']} (Skor: {r['score2']}/100)** <div class="metric-sub-line">├─🧬 Biyo-Mekanik: %{r['bio2']} | 🌪️ Aerodinamik: %{r['aero2']} | 🕸️ Lobi: %{r['lobby2']}</div>
