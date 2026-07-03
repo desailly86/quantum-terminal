@@ -66,17 +66,25 @@ st.markdown(f"""
         box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
     }}
     
-    /* 👑 KULLANICI İSTEĞİ: TAKVİMİ MATRİSİNİ KÜÇÜLTEN ÖZEL CSS HÜCRE KALKANI */
+    /* 👑 KULLANICI İSTEĞİ: TAKVİM MATRİSİNİ ULTRA KÜÇÜK VE MİKRO BOYUTA İNDİREN HÜCRESEL CSS */
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button {{
-        padding: 4px 1px !important;
-        font-size: 10px !important;
-        border-radius: 6px !important;
+        padding: 1px 1px !important;
+        font-size: 9px !important;
+        height: 20px !important;
+        min-height: 20px !important;
+        border-radius: 4px !important;
+        margin: 1px 0 !important;
         border-bottom: 2px solid {border_color} !important;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.15) !important;
     }}
     div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button:active {{
         transform: translateY(1px) !important;
         border-bottom-width: 1px !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) p {{
+        font-size: 9px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }}
     
     /* Neon Yeşil Tetikleme Butonu 3D Mührü */
@@ -118,7 +126,7 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
     
-    /* 👑 KULLANICI İSTEĞİ: SAYFANIN EN ALTINDA SABİTLENEN PREMIUM FOOTER */
+    /* SAYFANIN EN ALTINDA SABİTLENEN PREMIUM FOOTER */
     .fixed-footer {{
         position: fixed;
         left: 0;
@@ -142,7 +150,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 👑 KULLANICI İSTEĞİ: RE-GÜNCELLENEN REZONANS BAŞLIĞI
+# KURUMSAL REZONANS BAŞLIĞI
 st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR: METRIQX</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
 st.write("")
@@ -202,7 +210,7 @@ if 'quantum_results' in st.session_state and st.session_state['quantum_results']
 else:
     next_race_time = "13:30"
 
-# 👑 TAKVİM VE PİST TELEMETRİ GİRİŞ ALANI (KÜÇÜLTÜLMÜŞ SÜRÜMÜ)
+# MİKRO INTERAKTİF TAKVİM VE PİST TELEMETRİ YAN YANA PANELİ
 layout_col1, layout_col2 = st.columns([1.1, 1])
 
 with layout_col1:
@@ -371,7 +379,7 @@ def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
 
 # ==================== SEKME İÇERİKLERİ ====================
 
-# SAYFA: DASHBOARD
+# SAYFA: DASHBOARD (👑 %100 KESİNTİSİZ KORUMA + SİLİNMEYEN BLOOMBERG ŞEMALARI)
 if st.session_state['active_menu'] == 'Dashboard':
     st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
     if st.session_state['analyzed'] and st.session_state['quantum_results']:
@@ -412,7 +420,7 @@ if st.session_state['active_menu'] == 'Dashboard':
         """, unsafe_allow_html=True)
         st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
 
-    # CHART.JS DİYAGRAMLARI (TEMA DUYARLI METİN KONFİGÜRASYONU)
+    # 👑 BURASI KESİNTİSİZ KORUMA ALTINDADIR: 3 DEV CHART.JS FİNANSAL DİYAGRAMI (F-STRING BRACES %100 KİLİTLENDİ)
     st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
     components.html(f"""
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -424,9 +432,49 @@ if st.session_state['active_menu'] == 'Dashboard':
         </div>
     </div>
     <script>
-    new Chart(document.getElementById('ctxRoi'), {{ type: 'line', data: {{ labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'], datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }} }} }});
-    new Chart(document.getElementById('ctxPist'), {{ type: 'bar', data: {{ labels: ['Çim', 'Kum', 'Sentetik'], datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }}, scales: {{ y: {{ max:100, ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }} }} }});
-    new Chart(document.getElementById('ctxDonut'), {{ type: 'doughnut', data: {{ labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'], datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}] }}, options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ color: '{sub_text}', font:{{size:9}} }} }} }} }} }});
+    new Chart(document.getElementById('ctxRoi'), {{
+        type: 'line',
+        data: {{
+            labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'],
+            datasets: [{{ label: 'Net Alpha Getirisi (%)', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }}]
+        }},
+        options: {{
+            responsive: true,
+            plugins: {{ legend: {{ display: false }} }},
+            scales: {{ y: {{ ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }}
+        }}
+    }});
+    new Chart(document.getElementById('ctxPist'), {{
+        type: 'bar',
+        data: {{
+            labels: ['Çim', 'Kum', 'Sentetik'],
+            datasets: [{{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }}]
+        }},
+        options: {{
+            responsive: true,
+            plugins: {{ legend: {{ display: false }} }},
+            scales: {{ y: {{ max:100, ticks: {{ color: '{sub_text}' }} }}, x: {{ ticks: {{ color: '{sub_text}' }} }} }}
+        }}
+    }});
+    new Chart(document.getElementById('ctxDonut'), {{
+        type: 'doughnut',
+        data: {{
+            labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'],
+            datasets: [{{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }}]
+        }},
+        options: {{
+            responsive: true,
+            plugins: {{
+                legend: {{
+                    position: 'right',
+                    labels: {{
+                        color: '{sub_text}',
+                        font: {{ size: 9 }}
+                    }}
+                }}
+            }}
+        }}
+    }});
     </script>
     """, height=350)
     
@@ -518,7 +566,7 @@ elif st.session_state['active_menu'] == 'Analiz':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
+            with st.expander(f" 🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -559,7 +607,7 @@ elif st.session_state['active_menu'] == 'Analiz Detay':
             
         for r in st.session_state['quantum_results']:
             val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-            with st.expander(f"腔 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
+            with st.expander(f" 1 🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
                 col_text, col_chart = st.columns([1.2, 1])
                 with col_text:
                     for h in r['horses']:
@@ -748,5 +796,5 @@ elif st.session_state['active_menu'] == 'Yarış Sonuçları':
                 except: st.error("Bağlantı hatası.")
             else: st.error("❌ Secrets alanından API_URL tanımlanmamış!")
 
-# 👑 KULLANICI İSTEĞİ: SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
+# SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
 st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
