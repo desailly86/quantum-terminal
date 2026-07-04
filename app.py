@@ -17,6 +17,13 @@ try:
 except ImportError:
     VERI_KAYNAGI_HAZIR = False
 
+# 30 KRİTERLİ GERÇEK SHA TIN MOTORU (sha_tin_motoru.py aynı klasörde olmalı)
+try:
+    from sha_tin_motoru import pdf_ayristir, analiz_et, agirliklari_guncelle, VARSAYILAN_AGIRLIKLAR, KATEGORI_ADLARI
+    SHA_TIN_HAZIR = True
+except ImportError:
+    SHA_TIN_HAZIR = False
+
 # SİSTEM KONFİGÜRASYONU
 st.set_page_config(page_title="AVELOR METRIQX v9.6", page_icon="🏇", layout="centered")
 
@@ -197,6 +204,8 @@ API_URL = st.secrets.get("API_URL", "")
 
 # NAVİGASYON BELLEKLERİ
 if 'active_menu' not in st.session_state: st.session_state['active_menu'] = 'Dashboard'
+if 'ogrenme_agirliklari' not in st.session_state:
+    st.session_state['ogrenme_agirliklari'] = dict(VARSAYILAN_AGIRLIKLAR) if SHA_TIN_HAZIR else None
 if 'loaded_date' not in st.session_state: st.session_state['loaded_date'] = ""
 if 'ml_bias' not in st.session_state: st.session_state['ml_bias'] = {"bio": 0.0, "aero": 0.0, "lobby": 0.0}
 if 'expand_matrix' not in st.session_state: st.session_state['expand_matrix'] = True
@@ -624,7 +633,7 @@ elif st.session_state['active_menu'] == 'Bülten':
         if uploaded_pdf is not None:
             try:
                 reader = PdfReader(uploaded_pdf)
-                final_text = "".join([page.extract_text() or "" for page in reader.pages])
+                final_text = "\n".join([page.extract_text() or "" for page in reader.pages])
                 if not final_text.strip():
                     st.error("❌ PDF'ten metin çıkarılamadı. Taranmış (görüntü) PDF olabilir; metni elle yapıştırmayı deneyin.")
             except Exception as e:
@@ -641,32 +650,30 @@ elif st.session_state['active_menu'] == 'Bülten':
                     parts = cleaned_d.split('-')
                     target_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
                 else: target_date = cleaned_d
-            
-            status_text = st.empty()
-            progress_bar = st.progress(0)
-            criteria_list = [
-                "Kas Lifi Titreşim Eşiği Analizi", "Laktat Birikim Simülasyon Vektörü", "Padok Kalp Ritim Değişkenliği",
-                "Tırnak-Zemin Basınç Endeksi", "Eklem Viskozite Rezonansı", "Solunum Geri Kazanım Hızı",
-                "Hücresel Dehidrasyon Toleransı", "Glikojen Sönümleme Katsayısı", "Adım Frekansı Senkronizasyonu",
-                "Mikro-Postür Stabilite İndeksi", "Kulvar Merkezkaç Kuvvet Sapması", "Bariyer Dibi Vakum Koridoru Advantage",
-                "Rüzgar Duvarı Sürtünme Katsayısı (Fd)", "Jokey-At Bileşke Ağırlık Merkezi", "Son Düzlük İvmelenme Torku",
-                "Jokey Duruş Aerodinamisi (Drag)", "Kinetik Enerji Dönüşüm Oranı", "Pist Eğim Sönümleme Direnci",
-                "Başlangıç Makinesi Reaksiyon Süresi", "Düzlük Boyu Rüzgar Rotasyonu", "Medya Beyanat Sapması (Deception Delta)",
-                "Asimetrik Son Saniye Bahis Yoğunluğu", "Jokey-Ahır Tarihsel Diyet Paktı", "Ahırlar Arası Gizli İttifak Fısıltıları",
-                "Ahır İçi Spekülatif Bilgi Akışı", "Medya Aldatıcı Algı İndikatörü", "AGF Kamu Yanılgı Katsayısı",
-                "Sahiplik Network Güç Şebekesi", "Jokey Deklare Manipülasyon Belgesi", "Sündika İçi Akıllı Para Sızıntısı",
-                "Sentinel-2 NDVI Uydu Çim Sağlık Verisi", "Anlık Pist Termal Isı İmzası Taraması", "Micro-Meteorolojik Rüzgar Tüneli",
-                "Barometrik Basınç/Oksijen Satürasyonu", "Zemin Viskozite/Çamur Direnci", "Güneş Açısı Gölgelendirme İllüzyonu",
-                "Pist Nem Emilim Gradyanı", "Hava Yoğunluğu (Air Density) Katsayısı", "Hipodrom Rakım/Akciğer Hacim Oranı",
-                "Anlık Zemin Nem Değişkenliği Dalgası"
-            ]
-            for idx, criterion in enumerate(criteria_list):
-                progress_bar.progress((idx + 1) / 40.0)
-                status_text.markdown(f"🧬 **[Katman {idx+1}/40]** İşleniyor: *{criterion}*")
-                time.sleep(0.05)
-            status_text.empty(); progress_bar.empty()
-            
-            res_data = run_quantum_core(final_text, 8, w_bio, w_aero, w_lobby, w_atmos)
+
+            res_data = None
+            # === YOL 1: HKJC SHA TIN RACECARD → 30 GERÇEK KRİTER ===
+            if SHA_TIN_HAZIR and "Quick Reference" in final_text:
+                with st.spinner("HKJC racecard ayrıştırılıyor: rating, form, draw istatistikleri, denemeler, veteriner kayıtları..."):
+                    try:
+                        veri = pdf_ayristir(final_text)
+                        if veri["kosular"]:
+                            agirliklar = st.session_state.get('ogrenme_agirliklari', VARSAYILAN_AGIRLIKLAR)
+                            res_data = analiz_et(veri, agirliklar)
+                            if veri.get("tarih"): target_date = veri["tarih"]
+                            toplam_at = sum(len(r['horses']) for r in res_data)
+                            st.success(f"✅ {len(res_data)} koşu / {toplam_at} at, 30 gerçek kriterle puanlandı. "
+                                       f"Aktif ağırlıklar: " + ", ".join(f"{KATEGORI_ADLARI[k]} %{v*100:.0f}" for k, v in dict(agirliklar).items()))
+                        else:
+                            st.warning("⚠️ PDF'te 'Quick Reference' bulundu ama koşu ayrıştırılamadı; genel çözümleyiciye geçiliyor.")
+                    except Exception as e:
+                        st.error(f"❌ Sha Tin motoru hatası: {e}")
+            # === YOL 2: DİĞER METİNLER (ör. TJK yapıştırması) → genel çözümleyici ===
+            if res_data is None:
+                res_data = run_quantum_core(final_text, 8, w_bio, w_aero, w_lobby, w_atmos)
+                st.warning("ℹ️ Bu bülten HKJC racecard formatında değil; basit genel çözümleyici kullanıldı. "
+                           "TJK için 'Otomatik Bülten Çekimi' yolunu tercih edin.")
+
             st.session_state['quantum_results'] = res_data
             st.session_state['analyzed'] = True
             # DÜZELTME: Analiz farklı bir tarihe (bültenden okunan) kaydedilse bile
@@ -688,7 +695,51 @@ elif st.session_state['active_menu'] == 'Bülten':
 
 # SAYFA: ANALİZ MATRİSİ
 elif st.session_state['active_menu'] == 'Yarış Sonuçları':
-    st.subheader(f"🛡️ {date_str} Tarihli Sonuç Enjeksiyon Hattı")
+    st.subheader(f"🛡️ {date_str} Tarihli Sonuç Girişi ve Öğrenme")
+
+    # === 🧠 GERÇEK ÖĞRENME HATTI ===
+    if SHA_TIN_HAZIR and st.session_state.get('analyzed') and st.session_state.get('quantum_results') \
+            and any(h.get('kategoriler') for r in st.session_state['quantum_results'] for h in r['horses']):
+        st.markdown("### 🧠 Kazananları Gir → Model Ağırlıkları Öğrensin")
+        st.caption("Her koşunun kazananını seçin. Model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
+                   "kategori ağırlıklarını küçük adımlarla günceller. Bu gerçek ama yavaş bir öğrenmedir: "
+                   "anlamlı hale gelmesi onlarca yarış günü ister ve hiçbir zaman kazanç garantisi vermez.")
+        res = st.session_state['quantum_results']
+        secimler = {}
+        kolonlar = st.columns(3)
+        for i, r in enumerate(res):
+            with kolonlar[i % 3]:
+                atlar = [h for h in r['horses'] if not h.get('yedek')]
+                opsiyonlar = ["— seçilmedi —"] + [f"#{h['num']} {h['name']}" for h in atlar]
+                sec = st.selectbox(f"Koşu {r['race_no']} kazananı", opsiyonlar, key=f"kaz_{r['race_no']}")
+                if sec != "— seçilmedi —":
+                    secimler[r['race_no']] = int(sec.split()[0].replace("#", ""))
+        if st.button("🧠 SONUÇLARDAN ÖĞREN VE AĞIRLIKLARI GÜNCELLE", use_container_width=True):
+            if not secimler:
+                st.warning("En az bir koşunun kazananını seçin.")
+            else:
+                eski_w = st.session_state.get('ogrenme_agirliklari', VARSAYILAN_AGIRLIKLAR)
+                yeni_w, rapor = agirliklari_guncelle(eski_w, res, secimler)
+                st.session_state['ogrenme_agirliklari'] = yeni_w
+                c1, c2, c3 = st.columns(3)
+                c1.metric("İşlenen Koşu", rapor['kosu_sayisi'])
+                c2.metric("1. Tahmin İsabeti", f"{rapor['top1_isabet']}/{rapor['kosu_sayisi']}")
+                c3.metric("İlk-3 İsabeti", f"{rapor['top3_isabet']}/{rapor['kosu_sayisi']}")
+                st.write("**Yeni kategori ağırlıkları:**")
+                st.table(pd.DataFrame([{
+                    "Kategori": KATEGORI_ADLARI[k],
+                    "Yeni Ağırlık": f"%{v*100:.1f}",
+                    "Değişim": f"{rapor['degisim'][k]*100:+.2f} puan"} for k, v in yeni_w.items()]))
+                if API_URL:
+                    try:
+                        requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "AGIRLIKLAR",
+                                                     "Gelen_At": "OGRENME", "Detay": json.dumps({"w": yeni_w, "rapor": {k: v for k, v in rapor.items() if k != 'detay'}})},
+                                      timeout=10)
+                        st.success("✅ Öğrenilen ağırlıklar bulut arşivine de kaydedildi.")
+                    except requests.RequestException as e:
+                        st.warning(f"⚠️ Buluta yazılamadı (ağırlıklar bu oturumda geçerli): {e}")
+        st.write("---")
+
     bulk_data = st.text_area("Yarış bittikten sonra sonuç tablosunu direkt kopyalayıp buraya yapıştırın (Copy-Paste):", height=150)
     if st.button("🧠 TÜM GÜNÜN VERİSİNİ MATRİSE KİLİTLE") and bulk_data:
         if API_URL:
@@ -721,7 +772,16 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                     with col_text:
                         for h in r['horses']:
                             v_marker = " 👑 [VALUE]" if h['val'] else ""
-                            st.markdown(f"**{h['medal']} #{h['num']} {h['name']} (Skor: {h['score']}){v_marker}**\n* 🧬 Biyo: %{h['bio']} | 🌪️ Aero: %{h['aero']} | 🕸️ Lobi: %{h['lobby']} | 🤝 Sinerji: %{h['syn']}")
+                            st.markdown(f"**{h['medal']} #{h['num']} {h['name']} (Skor: {h['score']}){v_marker}**\n* 📈 Form: %{h['bio']} | 🎯 Rating: %{h['aero']} | 👤 İnsan F.: %{h['lobby']} | 🎲 Koşul: %{h['syn']}")
+                        if any(h.get('kriterler') for h in r['horses']):
+                            if st.toggle("🔬 30 Kriterlik Tam Matrisi Göster", key=f"krit_{r['race_no']}"):
+                                krit_df = pd.DataFrame(
+                                    {f"#{h['num']} {h['name'][:14]}": h['kriterler'] for h in r['horses'] if h.get('kriterler')}
+                                )
+                                st.dataframe(krit_df, use_container_width=True, height=420)
+                                st.caption("Her sütun bir at, her satır PDF'ten hesaplanan gerçek bir kriter (0-100). "
+                                           "A=Rating/Sınıf, B=Form, C=İnsan, D=Koşul (12 aylık draw istatistikleri), E=Hazırlık/Risk. "
+                                           "50 = o kriter için PDF'te veri yok (nötr).")
                     with col_chart:
                         radar_raw_js = """
                         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -730,7 +790,7 @@ elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
                         new Chart(document.getElementById('CHART_ID'), {
                             type: 'radar',
                             data: {
-                                labels: ['Biyo', 'Aerodinamik', 'Lobi Sinyali'],
+                                labels: ['Form', 'Rating', 'İnsan Faktörü'],
                                 datasets: [
                                     { label: '#H1_NUM', data: [H1_BIO, H1_AERO, H1_LOBBY], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 },
                                     { label: '#H2_NUM', data: [H2_BIO, H2_AERO, H2_LOBBY], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }
