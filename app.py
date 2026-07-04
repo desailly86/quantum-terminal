@@ -2,7 +2,7 @@
 """
 AVELOR — Yarış Analiz Masası
 Tasarım: beyaz zemin, siyah metin, Candara; gri kabartmalı butonlar.
-Motor: sha_tin_motoru (30 gerçek kriter + öğrenen ağırlıklar), veri_kaynagi (TJK/HKJC çekiciler).
+Motor: sha_tin_motoru (38 gerçek kriter + öğrenen ağırlıklar), veri_kaynagi (TJK/HKJC çekiciler).
 """
 import json
 import re
@@ -236,7 +236,7 @@ def rapor_html(analiz, tarih, agirliklar):
         <div class="tarih">{guzel_tarih}</div></div>
       {kosu_bloklari}
       <div class="alt">Skorlar, resmi racecard verilerinden (rating, form, jokey/antrenör istatistikleri,
-      12 aylık draw tabloları, deneme koşuları, veteriner kayıtları) hesaplanan 30 kriterin ağırlıklı
+      12 aylık draw tabloları, deneme koşuları, veteriner kayıtları) hesaplanan 38 kriterin ağırlıklı
       ortalamasıdır. Aktif ağırlıklar: {agirlik_satiri}. Bu rapor bir kazanç garantisi değildir;
       sorumlu oynayın.</div>
     </body></html>"""
@@ -280,7 +280,7 @@ elif menu == "Bülten":
         if not SHA_TIN_HAZIR:
             st.error("sha_tin_motoru.py bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
         pdf = st.file_uploader("HKJC günlük racecard PDF'i (≈58 sayfa)", type=["pdf"])
-        if st.button("Bülteni ayrıştır ve 30 kriterle puanla", type="primary",
+        if st.button("Bülteni ayrıştır ve 38 kriterle puanla", type="primary",
                      disabled=not (SHA_TIN_HAZIR and pdf)):
             with st.spinner("Rating, form, draw istatistikleri, denemeler ve veteriner kayıtları okunuyor…"):
                 try:
@@ -332,7 +332,7 @@ elif menu == "Bülten":
                         cekilen = form_skoru_hesapla(cekilen)
                         st.session_state.update(quantum_results=cekilen, analyzed=True, loaded_date=date_str)
                         st.success(f"{len(cekilen)} koşu çekildi ve basit form skoruyla puanlandı "
-                                   "(web verisi PDF kadar zengin değildir; 30 kriter yalnızca PDF yolunda).")
+                                   "(web verisi PDF kadar zengin değildir; 38 kriter yalnızca PDF yolunda).")
                         st.rerun()
                 except Exception as e:
                     st.error(f"Veri çekilemedi: {e}")
@@ -346,7 +346,7 @@ elif menu == "Analiz":
         for r in res:
             kosu_karti(r)
             atlar = [h for h in r["horses"] if h.get("kriterler")]
-            if atlar and st.toggle(f"Koşu {r['race_no']} · 30 kriterlik tam matris", key=f"m{r['race_no']}"):
+            if atlar and st.toggle(f"Koşu {r['race_no']} · 38 kriterlik tam matris", key=f"m{r['race_no']}"):
                 st.dataframe(pd.DataFrame({f"#{h['num']} {h['name'][:14]}": h["kriterler"] for h in atlar}),
                              use_container_width=True, height=420)
                 st.caption("A Rating/Sınıf · B Form · C İnsan · D Koşul (12 aylık draw istatistiği) · "
@@ -469,7 +469,7 @@ elif menu == "Tahmin":
 elif menu == "Sonuç & Öğrenme":
     st.markdown("# Sonuç Girişi ve Öğrenme")
     if not (SHA_TIN_HAZIR and res and any(h.get("kategoriler") for r in res for h in r["horses"])):
-        st.info("Öğrenme için bu tarihte 30 kriterli (PDF yolundan) bir analiz yüklü olmalı.")
+        st.info("Öğrenme için bu tarihte 38 kriterli (PDF yolundan) bir analiz yüklü olmalı.")
     else:
         st.caption("Kazananları seçin; model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
                    "ağırlıkları küçük adımlarla günceller. Anlamlı öğrenme onlarca yarış günü ister; "
