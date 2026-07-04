@@ -3,11 +3,11 @@
 sha_tin_motoru.py — HKJC Sha Tin Racecard PDF Analiz Motoru
 ============================================================
 58 sayfalık resmi HKJC racecard PDF'ini ayrıştırır ve HER KRİTERİ
-PDF'TE GERÇEKTEN VAR OLAN VERİDEN hesaplayan 30 kriterli bir analiz
+PDF'TE GERÇEKTEN VAR OLAN VERİDEN hesaplayan 38 kriterli bir analiz
 matrisi üretir. Uydurma veri yoktur; bir alan PDF'te yoksa kriter
 "nötr (50)" kabul edilir ve bu şeffafça işaretlenir.
 
-5 kategori / 30 kriter:
+5 kategori / 38 kriter:
   A. RATING & SINIF (5)  — resmi rating, sınıf bandı konumu, kilo...
   B. FORM (8)            — son koşular, kariyer yüzdeleri, trend...
   C. İNSAN FAKTÖRÜ (6)   — jokey/antrenör sezon kazanma yüzdeleri...
@@ -55,7 +55,81 @@ def pdf_ayristir(pdf_kaynagi) -> dict:
         "ekipman": _ekipman_ayristir(sayfalar),
         "tarih": _tarih_bul(tam_metin),
     }
+    veri["detay"] = _detay_ayristir(sayfalar, veri["tarih"])
     return veri
+
+
+_REC = re.compile(r"(\d+)\((\d+)-(\d+)-(\d+)-(\d+)-(\d+)\)")
+
+def _rec_oku(metin, etiket):
+    """'Dist ：13(1-3-3-0-6)' kalıbından (start, 1., 2., 3.) döndürür."""
+    m = re.search(re.escape(etiket) + r"\s*：\s*" + _REC.pattern, metin)
+    if not m:
+        return None
+    return {"n": int(m.group(1)), "w": int(m.group(2)),
+            "p2": int(m.group(3)), "p3": int(m.group(4))}
+
+
+def _detay_ayristir(sayfalar, bulten_tarihi):
+    """
+    B1-B22 form sayfalarından at adı anahtarlı derin istatistikler:
+    mesafe/pist+mesafe/sınıf/sezon rekorları, 1st-2nd Up, jokey-antrenör
+    ortak geçmişi, zemin (G) kaydı, sağlık notları, son koşudan bu yana gün.
+    """
+    detay = {}
+    isim_kalip = re.compile(r"^([A-Z][A-Z' .\-]+?)\s+\((?:AUS|NZ|IRE|GB|USA|FR|SAF|ARG|GER|JPN|ITY|MAC)\)\s+\d", re.M)
+    try:
+        y, a, g = (int(x) for x in bulten_tarihi.split("-"))
+        import datetime as _dt
+        bugun = _dt.date(y, a, g)
+    except (ValueError, AttributeError):
+        bugun = None
+
+    for sayfa in sayfalar:
+        if "HKJC Career" not in sayfa:
+            continue
+        adlar = list(isim_kalip.finditer(sayfa))
+        for i, m in enumerate(adlar):
+            blok = sayfa[m.start(): adlar[i+1].start() if i+1 < len(adlar) else len(sayfa)]
+            # blok bir sonraki atın form satırlarını da içerebilir; istatistikler
+            # her zaman ismin hemen altındaki 6 satırda olduğundan sorun olmaz.
+            kayit = {
+                "dist": _rec_oku(blok, "Dist"),
+                "trk_dist": _rec_oku(blok, "Trk/Dist"),
+                "sinif": _rec_oku(blok, "Class"),
+                "sezon": _rec_oku(blok, "25/26") or _rec_oku(blok, "26/27"),
+                "ilk_cikis": _rec_oku(blok, "1st Up"),
+                "tra_joc": _rec_oku(blok, "Tra/Joc"),
+                "zemin_g": _rec_oku(blok, "G"),
+                "saglik": bool(re.search(r"(Bleeding|Heart irregularity|Roarer) record", blok)),
+                "gun_farki": None,
+            }
+            if bugun:
+                gunler = []
+                for t in re.findall(r"\b(\d{1,2})/(\d{1,2})/(\d{2})\b", blok):
+                    try:
+                        import datetime as _dt
+                        d = _dt.date(2000 + int(t[2]), int(t[1]), int(t[0]))
+                        if d < bugun:
+                            gunler.append((bugun - d).days)
+                    except ValueError:
+                        pass
+                if gunler:
+                    kayit["gun_farki"] = min(gunler)
+            detay[m.group(1).strip()] = kayit
+    return detay
+
+
+def _rec_puan(rec, kazanma_carpan=4.0, tabela_carpan=2.0):
+    """Rekoru 0-100 puana çevirir; az start = nötre doğru istatistiksel büzülme."""
+    if not rec or rec["n"] == 0:
+        return NOTR
+    n = rec["n"]
+    kazanma = min(100, rec["w"] / n * 100 * kazanma_carpan)
+    tabela = min(100, (rec["w"] + rec["p2"] + rec["p3"]) / n * 100 * tabela_carpan)
+    ham = 0.55 * kazanma + 0.45 * tabela
+    guven = n / (n + 3.0)  # 1 start → %25 etki, 10 start → %77 etki
+    return NOTR + (ham - NOTR) * guven
 
 
 def _tarih_bul(metin):
@@ -214,7 +288,7 @@ def _ekipman_ayristir(sayfalar):
 
 
 # ---------------------------------------------------------------------------
-# 2) 30 KRİTERLİ PUANLAMA
+# 2) 38 KRİTERLİ PUANLAMA
 # ---------------------------------------------------------------------------
 def _n(deger, dizi):
     """Koşu içi min-max normalizasyon (0-100). Tek değer/veri yoksa nötr."""
@@ -230,7 +304,7 @@ def _form_puani(karakter):
 
 
 def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
-    """Ayrıştırılmış PDF verisini 30 kriterle puanlar."""
+    """Ayrıştırılmış PDF verisini 38 kriterle puanlar."""
     w = dict(agirliklar or VARSAYILAN_AGIRLIKLAR)
     sonuc = []
     for kosu in veri["kosular"]:
@@ -282,6 +356,24 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
             k["B7 Tutarlılık"] = min(100, ((h["w1"] + h["w2"]) / st * 100) * 3) if st else NOTR
             k["B8 Deneyim"] = min(100, st * 8) if st else 0
 
+            # ---- B (devam): DETAY SAYFALARINDAN DERİN FORM ----
+            dt = veri.get("detay", {}).get(h["name"], {})
+            k["B9 Mesafe Rekoru"] = _rec_puan(dt.get("dist"))
+            k["B10 Pist+Mesafe Rekoru"] = _rec_puan(dt.get("trk_dist"))
+            k["B11 Sınıf Rekoru"] = _rec_puan(dt.get("sinif"))
+            k["B12 Sezon Formu"] = _rec_puan(dt.get("sezon"))
+            gf = dt.get("gun_farki")
+            if gf is None:
+                k["B13 Dinlenme Uyumu"] = NOTR
+            elif gf >= 120:  # uzun aradan dönüş → atın 1st Up geçmişi konuşur
+                k["B13 Dinlenme Uyumu"] = _rec_puan(dt.get("ilk_cikis"))
+            elif 14 <= gf <= 45:
+                k["B13 Dinlenme Uyumu"] = 100
+            elif gf < 14:
+                k["B13 Dinlenme Uyumu"] = 55
+            else:
+                k["B13 Dinlenme Uyumu"] = 65
+
             # ---- C. İNSAN FAKTÖRÜ ----
             jp = h["jockey_pct"]
             k["C1 Jokey Kazanma %"] = min(100, jp * 5) if jp is not None else 0
@@ -290,6 +382,7 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
             k["C4 Elit Jokey"] = 100 if (jp or 0) >= 12 else (60 if (jp or 0) >= 8 else 25)
             k["C5 Elit Antrenör"] = 100 if h["trainer_pct"] >= 10 else (60 if h["trainer_pct"] >= 7.5 else 25)
             k["C6 Jokey Atanmış"] = 100 if h["jockey"] else 0
+            k["C7 Jokey-Antrenör Ortak Geçmişi"] = _rec_puan(dt.get("tra_joc"), 6.0, 3.0)
 
             # ---- D. KOŞUL UYUMU (PDF'in kendi 12 aylık draw tablosu) ----
             d = draw_tbl.get(h["draw"]) if h["draw"] else None
@@ -302,6 +395,9 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
                 k["D6 Kilo×Mesafe"] = 100 - _n(h["weight"], kilolar)  # uzun mesafede kilo daha kritik
             else:
                 k["D6 Kilo×Mesafe"] = NOTR
+            # HK'de baskın zemin 'Good'dur; günün zemini bültende olmadığından
+            # atın G zeminindeki geçmişi varsayılan uyum göstergesi kabul edilir.
+            k["D7 İyi Zemin (G) Uyumu"] = _rec_puan(dt.get("zemin_g"))
 
             # ---- E. HAZIRLIK & RİSK ----
             deneme = veri["denemeler"].get((kosu["race_no"], h["name"]))
@@ -317,15 +413,14 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
             ekip = veri["ekipman"].get((kosu["race_no"], h["num"]))
             k["E4 Ekipman Değişikliği"] = 60 if (ekip and "1" in ekip) else (40 if ekip else NOTR)
             k["E5 Az Koşu Belirsizliği"] = 100 if st >= 5 else st * 20
+            k["E6 Sağlık Geçmişi"] = 25 if dt.get("saglik") else 100  # resmi kanama/kalp/roarer kaydı
 
-            # ---- Kategori ve toplam ----
-            kat = {
-                "rating": sum(v for a, v in k.items() if a.startswith("A")) / 5,
-                "form": sum(v for a, v in k.items() if a.startswith("B")) / 8,
-                "insan": sum(v for a, v in k.items() if a.startswith("C")) / 6,
-                "kosul": sum(v for a, v in k.items() if a.startswith("D")) / 6,
-                "risk": sum(v for a, v in k.items() if a.startswith("E")) / 5,
-            }
+            # ---- Kategori ve toplam (kriter sayısına göre dinamik ortalama) ----
+            def _kat_ort(harf):
+                degerler = [v for a, v in k.items() if a.startswith(harf)]
+                return sum(degerler) / len(degerler)
+            kat = {"rating": _kat_ort("A"), "form": _kat_ort("B"), "insan": _kat_ort("C"),
+                   "kosul": _kat_ort("D"), "risk": _kat_ort("E")}
             h["kriterler"] = {a: round(v, 1) for a, v in k.items()}
             h["kategoriler"] = {a: round(v, 1) for a, v in kat.items()}
             h["score"] = round(sum(w[a] * kat[a] for a in w), 1)
