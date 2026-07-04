@@ -1,965 +1,510 @@
-import streamlit as st
-import streamlit.components.v1 as components
-import pandas as pd
-import time
-import hashlib
-import requests
-import re
+# -*- coding: utf-8 -*-
+"""
+AVELOR — Yarış Analiz Masası
+Tasarım: beyaz zemin, siyah metin, Candara; gri kabartmalı butonlar.
+Motor: sha_tin_motoru (30 gerçek kriter + öğrenen ağırlıklar), veri_kaynagi (TJK/HKJC çekiciler).
+"""
 import json
-import calendar
+import re
+import datetime
+import requests
+import pandas as pd
+import streamlit as st
 from pypdf import PdfReader
-from weasyprint import HTML
 
-# GERÇEK VERİ KATMANI (veri_kaynagi.py aynı klasörde olmalı)
+# ---------------------------------------------------------------- MOTORLAR
+try:
+    from sha_tin_motoru import (pdf_ayristir, analiz_et, agirliklari_guncelle,
+                                VARSAYILAN_AGIRLIKLAR, KATEGORI_ADLARI)
+    SHA_TIN_HAZIR = True
+except ImportError:
+    SHA_TIN_HAZIR = False
+
 try:
     from veri_kaynagi import tjk_program_cek, hkjc_racecard_cek, form_skoru_hesapla
     VERI_KAYNAGI_HAZIR = True
 except ImportError:
     VERI_KAYNAGI_HAZIR = False
 
-# 30 KRİTERLİ GERÇEK SHA TIN MOTORU (sha_tin_motoru.py aynı klasörde olmalı)
 try:
-    from sha_tin_motoru import pdf_ayristir, analiz_et, agirliklari_guncelle, VARSAYILAN_AGIRLIKLAR, KATEGORI_ADLARI
-    SHA_TIN_HAZIR = True
-except ImportError:
-    SHA_TIN_HAZIR = False
+    from weasyprint import HTML
+    PDF_HAZIR = True
+except Exception:
+    PDF_HAZIR = False
 
-# SİSTEM KONFİGÜRASYONU
-st.set_page_config(page_title="AVELOR METRIQX v9.6", page_icon="🏇", layout="centered")
-
-# 🌓 GÜNDÜZ/GECE MODU SEÇİCİSİ (YAZI OKUNABİLİRLİĞİ %100 OPTİMİZE EDİLDİ)
-st.sidebar.markdown("### 🌓 Ekran Optimizasyonu")
-light_mode = st.sidebar.toggle("☀️ Gündüz Saha Modu (Yüksek Kontrast)", value=False)
-
-# ŞANLI FENERBAHÇE RENK PALETİ MATRİSİ
-if light_mode:
-    bg_color = "#ffffff"
-    text_color = "#000000"
-    card_bg = "#f6f8fa"
-    border_color = "#fcd116"
-    accent_color = "#0969da"
-    sub_text = "#333333"
-    intel_bg = "#fff3cd"
-    intel_border = "#bf4b21"
-else:
-    bg_color = "#001c3d"      # Ebedi Fenerbahçe Laciverti
-    text_color = "#ffffff"     # Saf Beyaz Okunabilirlik
-    card_bg = "#002a54"       # Hafif Açık Derin Lacivert Kartlar
-    border_color = "#fcd116"  # Ebedi Fenerbahçe Altın Sarısı
-    accent_color = "#fcd116"   # Parlayan Sarı Detaylar
-    sub_text = "#dcdcdc"
-    intel_bg = "#211510"
-    intel_border = "#fcd116"
-
-# PREMIUM EXECUTIVE DİNAMİK CSS ARAYÜZÜ (3 BOYUTLU EMBOSSED BUTONLAR VE TABLO SIKIŞTIRMA KALKANI)
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; padding-bottom: 90px !important; }}
-    h1 {{ font-size: min(24px, 5.5vw) !important; white-space: nowrap !important; text-align: center !important; letter-spacing: -1px; margin-bottom: 3px !important; color: {text_color}; }}
-    h3, h2, h4 {{ color: {text_color} !important; }}
-    
-    /* Dashboard Sıkılaştırma ve Tablo Satır Aralıklarını Daraltma Mührü */
-    .block-container {{ padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }}
-    div.stTable, div[data-testid="stTable"] {{ margin-bottom: 4px !important; padding: 0 !important; }}
-    div.stTable td, div.stTable th, [data-testid="stTable"] td, [data-testid="stTable"] th {{
-        padding: 4px 6px !important;
-        font-size: 11px !important;
-        line-height: 1.1 !important;
-    }}
-    
-    /* Tüm Menü Butonları 3 Boyutlu Kabartmalı Sarı Kenarlıklı Yapıldı */
-    div.stButton > button {{
-        width: 100%;
-        border-radius: 10px !important;
-        padding: 10px !important;
-        font-weight: bold !important;
-        font-size: 11px !important;
-        background: linear-gradient(180deg, {card_bg} 0%, {bg_color} 100%) !important;
-        color: {text_color} !important;
-        border: 1px solid {border_color} !important;
-        border-bottom: 4px solid {border_color} !important;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.3) !important;
-        transition: all 0.1s ease-in-out !important;
-    }}
-    div.stButton > button:hover {{
-        transform: translateY(1px) !important;
-        border-bottom-width: 3px !important;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.4) !important;
-    }}
-    div.stButton > button:active {{
-        transform: translateY(3px) !important;
-        border-bottom-width: 1px !important;
-        box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
-    }}
-    
-    /* MOBİLDE ASLA PATLAMAYAN MİKRO-ÖLÇEKLİ TAKVİM GRİD CSS KALKANI */
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) {{
-        gap: 2px !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) div[data-testid="stColumn"] {{
-        padding: 0px 1px !important;
-        min-width: 0px !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button {{
-        padding: 1px 0px !important;
-        font-size: 9px !important;
-        height: 18px !important;
-        min-height: 18px !important;
-        border-radius: 4px !important;
-        margin: 1px 0 !important;
-        border: 1px solid {border_color} !important;
-        border-bottom: 2px solid {border_color} !important;
-        box-shadow: 0px 1px 3px rgba(0,0,0,0.2) !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) button:active {{
-        transform: translateY(1px) !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stColumn"]:nth-child(7)) p {{
-        font-size: 9px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        text-align: center !important;
-    }}
-    
-    /* FILE UPLOADER IÇINDEKİ GÖRÜNMEYEN YAZILAR ICIN MUTLAK KONTRAST MÜHRÜ */
-    .stFileUploaderDropzone, .stFileUploaderDropzone span, .stFileUploaderDropzone small, div[data-testid="stFileUploaderDropzone"] p {{
-        color: {text_color} !important;
-    }}
-    
-    /* Neon Yeşil Tetikleme Butonu 3D Mührü */
-    div[data-testid="stBlock"] button[key="trigger_btn"] {{
-        background: linear-gradient(180deg, #2ea043 0%, #238636 100%) !important;
-        color: #ffffff !important;
-        border: 1px solid #145222 !important;
-        border-bottom: 4px solid #145222 !important;
-        font-size: 13px !important;
-        box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4) !important;
-    }}
-    
-    /* Expander Başlık Okunabilirlik Kalkanı */
-    .streamlit-expanderHeader, [data-testid="stExpander"] summary, [data-testid="stExpander"] button {{
-        background-color: {card_bg} !important;
-        border: 1px solid {border_color} !important;
-    }}
-    div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span, div[data-testid="stExpander"] summary div {{
-        color: {text_color} !important;
-        font-weight: bold !important;
-    }}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] span, div[data-testid="stExpander"] div {{
-        color: {text_color} !important;
-    }}
-    
-    .quant-card {{ border: 1px solid {border_color}; padding: 12px; border-radius: 14px; margin-bottom: 15px; background-color: {card_bg}; border-left: 6px solid #1f6feb; box-sizing: border-box; overflow: hidden; }}
-    .quant-card p {{ margin: 4px 0; font-size: min(13px, 3.4vw) !important; white-space: normal !important; word-wrap: break-word; overflow: hidden; color: {text_color} !important; }}
-    
-    .telemetry-badge {{ background-color: {card_bg}; border: 1px solid {border_color}; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: #58a6ff; font-family: monospace; text-align: center; }}
-    .metric-sub-line {{ font-size: 12px; color: {sub_text}; margin-left: 15px; font-family: monospace; margin-bottom: 5px; }}
-    
-    /* 40 Kriter Şov Alanı CSS */
-    .showoff-container {{ border: 1px solid {border_color}; padding: 20px; border-radius: 12px; background-color: {card_bg}; margin-top: 15px; }}
-    .showoff-title {{ font-size: 13px; font-weight: bold; color: #58a6ff; font-family: monospace; margin-bottom: 10px; border-bottom: 1px solid {border_color}; padding-bottom: 5px; }}
-    .showoff-grid {{ display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 11px; font-family: monospace; color: {sub_text}; }}
-    
-    .reason-box {{ background-color: {card_bg}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: {text_color} !important; border-left: 4px solid #1f6feb; box-shadow: 0px 2px 6px rgba(0,0,0,0.2); }}
-    .intel-box {{ border: 1px solid {intel_border}; padding: 15px; border-radius: 10px; background-color: {intel_bg}; border-left: 5px solid {intel_border}; margin-bottom: 15px; font-size: 12px; line-height: 1.5; color: {text_color} !important; }}
-    
-    /* Premium Trading Card / Tahmin Bileti Tasarımı */
-    .premium-kupon-card {{
-        border: 1px solid {border_color};
-        background: linear-gradient(145deg, {card_bg} 0%, {bg_color} 100%);
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 15px;
-        border-left: 6px solid #1f6feb;
-        position: relative;
-        color: {text_color} !important;
-    }}
-    
-    /* SAYFANIN EN ALTINDA SABİTLENEN PREMIUM FOOTER */
-    .fixed-footer {{
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: {card_bg};
-        color: {sub_text};
-        text-align: center;
-        padding: 10px 0;
-        font-size: 11px;
-        font-family: monospace;
-        font-weight: bold;
-        border-top: 1px solid {border_color};
-        z-index: 9999;
-        letter-spacing: 1px;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-
-# TAM ASİL BAŞLIK DÜZENİ
-st.markdown(f"<h1 style='text-align: center; color: {text_color}; font-weight: bold;'>AVELOR METRIQX</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: {sub_text}; font-size: 11px; font-weight: bold; margin-top: -8px; letter-spacing: 1.5px;'>EQUINE QUANTUM TELEMETRY SYSTEM</p>", unsafe_allow_html=True)
-st.write("")
-
+st.set_page_config(page_title="AVELOR — Yarış Analiz Masası", page_icon="🏇",
+                   layout="wide", initial_sidebar_state="expanded")
 API_URL = st.secrets.get("API_URL", "")
 
-# NAVİGASYON BELLEKLERİ
-if 'active_menu' not in st.session_state: st.session_state['active_menu'] = 'Dashboard'
-if 'ogrenme_agirliklari' not in st.session_state:
-    st.session_state['ogrenme_agirliklari'] = dict(VARSAYILAN_AGIRLIKLAR) if SHA_TIN_HAZIR else None
-if 'loaded_date' not in st.session_state: st.session_state['loaded_date'] = ""
-if 'ml_bias' not in st.session_state: st.session_state['ml_bias'] = {"bio": 0.0, "aero": 0.0, "lobby": 0.0}
-if 'expand_matrix' not in st.session_state: st.session_state['expand_matrix'] = True
-if 'expand_detay' not in st.session_state: st.session_state['expand_detay'] = True
+# ---------------------------------------------------------------- TEMA
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
+:root{
+  --kagit:#FFFFFF; --murekkep:#111111; --kursun:#6A6A6A;
+  --cizgi:#DCDCDC; --gumus-acik:#F5F5F5; --gumus:#E2E2E2; --gumus-koyu:#BFBFBF;
+}
+html, body, .stApp, [data-testid="stSidebar"]{
+  font-family: Candara, "Questrial", "Gill Sans", "Segoe UI", Optima, sans-serif !important;
+}
+.stApp{ background: var(--kagit); color: var(--murekkep); }
+[data-testid="stSidebar"]{ background:#FAFAFA; border-right:1px solid var(--cizgi); }
+h1,h2,h3,h4{ color:var(--murekkep) !important; font-weight:600; letter-spacing:.2px; }
+p, li, label, .stMarkdown{ color:var(--murekkep); }
+small, .stCaption, [data-testid="stCaptionContainer"]{ color:var(--kursun) !important; }
+hr{ border-color:var(--cizgi); }
 
-if 'cal_month' not in st.session_state: st.session_state['cal_month'] = pd.Timestamp.now().month
-if 'cal_year' not in st.session_state: st.session_state['cal_year'] = pd.Timestamp.now().year
-if 'selected_date_str' not in st.session_state: st.session_state['selected_date_str'] = pd.Timestamp.now().strftime("%Y-%m-%d")
+/* ---- GRİ 3B BUTONLAR ---- */
+.stButton>button, .stDownloadButton>button{
+  font-family:inherit; color:var(--murekkep);
+  background:linear-gradient(180deg, var(--gumus-acik) 0%, var(--gumus) 100%);
+  border:1px solid var(--gumus-koyu); border-radius:6px;
+  box-shadow:0 3px 0 var(--gumus-koyu), 0 4px 6px rgba(0,0,0,.08);
+  transition:all .08s ease; font-weight:600;
+}
+.stButton>button:hover{ background:linear-gradient(180deg,#FFFFFF,#EAEAEA); color:var(--murekkep); border-color:#9E9E9E; }
+.stButton>button:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--gumus-koyu); }
+.stButton>button[kind="primary"]{
+  color:#FFFFFF; background:linear-gradient(180deg,#4B4B4B 0%,#2C2C2C 100%);
+  border:1px solid #1E1E1E; box-shadow:0 3px 0 #1E1E1E, 0 4px 8px rgba(0,0,0,.18);
+}
+.stButton>button[kind="primary"]:hover{ background:linear-gradient(180deg,#5A5A5A,#333333); color:#fff; }
 
-date_str = st.session_state['selected_date_str']
+/* ---- RACECARD KARTLARI ---- */
+.kart{ border:1px solid var(--cizgi); border-radius:8px; background:#FFF;
+       padding:14px 18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.kosu-baslik{ display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--murekkep);
+              padding-bottom:8px; margin-bottom:10px; }
+.kosu-no{ background:var(--murekkep); color:#FFF; font-weight:700; font-size:20px;
+          width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+.kosu-meta{ color:var(--kursun); font-size:13px; letter-spacing:.6px; text-transform:uppercase; }
+.at-satir{ display:grid; grid-template-columns:34px 30px 1fr 140px 56px; gap:10px;
+           align-items:center; padding:7px 4px; border-bottom:1px solid #EFEFEF; }
+.at-satir:last-child{ border-bottom:none; }
+.sira{ font-weight:700; color:var(--kursun); }
+.atno{ border:1px solid var(--murekkep); border-radius:4px; text-align:center;
+       font-weight:700; font-size:13px; padding:1px 0; }
+.atadi{ font-weight:600; } .atalt{ color:var(--kursun); font-size:12px; }
+.bar-kap{ background:var(--gumus-acik); border:1px solid var(--cizgi); border-radius:4px; height:14px; overflow:hidden; }
+.bar-ic{ background:var(--murekkep); height:100%; }
+.skor{ font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+.rozet{ display:inline-block; border:1px solid var(--cizgi); border-radius:4px;
+        padding:1px 8px; font-size:12px; color:var(--kursun); margin-right:6px; background:var(--gumus-acik);}
+.banko{ border:2px solid var(--murekkep); border-radius:8px; padding:12px 16px; background:var(--gumus-acik); }
+[data-testid="stMetricValue"]{ color:var(--murekkep); }
+</style>
+""", unsafe_allow_html=True)
 
-# ADAPTİF BULUT ARŞİV MOTORU
-if st.session_state['loaded_date'] != date_str:
-    st.session_state['analyzed'] = False
-    st.session_state['quantum_results'] = []
-    st.session_state['past_results_text'] = ""
-    # DÜZELTME: loaded_date her koşulda güncellenmeli. Eskiden sadece API_URL doluysa
-    # ve istek başarılıysa güncelleniyordu; API_URL boşken her rerun'da sonuçlar siliniyordu.
-    st.session_state['loaded_date'] = date_str
+# ---------------------------------------------------------------- OTURUM
+def _init(anahtar, deger):
+    if anahtar not in st.session_state:
+        st.session_state[anahtar] = deger
 
+_init("menu", "Masa")
+_init("quantum_results", [])
+_init("analyzed", False)
+_init("loaded_date", "")
+_init("ogrenme_agirliklari", dict(VARSAYILAN_AGIRLIKLAR) if SHA_TIN_HAZIR else None)
+_init("isabet_gecmisi", [])
+
+# ---------------------------------------------------------------- YAN MENÜ
+with st.sidebar:
+    st.markdown("## 🏇 AVELOR")
+    st.caption("Yarış Analiz Masası — Sha Tin & TJK")
+    secili_tarih = st.date_input("Yarış günü", datetime.date.today(), format="DD.MM.YYYY")
+    date_str = secili_tarih.isoformat()
+    st.write("---")
+    for ad, ikon in [("Masa", "📊"), ("Bülten", "📥"), ("Analiz", "🔬"),
+                     ("Detay", "📝"), ("Tahmin", "🎟️"), ("Sonuç & Öğrenme", "🧠")]:
+        if st.button(f"{ikon} {ad}", use_container_width=True,
+                     type="primary" if st.session_state["menu"] == ad else "secondary"):
+            st.session_state["menu"] = ad
+            st.rerun()
+    st.write("---")
+    if SHA_TIN_HAZIR and st.session_state["ogrenme_agirliklari"]:
+        st.caption("Aktif model ağırlıkları")
+        for k, v in st.session_state["ogrenme_agirliklari"].items():
+            st.caption(f"{KATEGORI_ADLARI[k]}: %{v*100:.0f}")
+
+# ---------------------------------------------------------------- BULUT YÜKLEME
+if st.session_state["loaded_date"] != date_str:
+    st.session_state.update(analyzed=False, quantum_results=[], loaded_date=date_str)
     if API_URL:
         try:
-            response = requests.get(API_URL, timeout=10)
-            response.raise_for_status()
-            hist = response.json()
-            
-            sapma_listes = [row.get("Sapma_Nedeni", "") for row in hist if row.get("Sapma_Nedeni")]
-            if sapma_listes:
-                en_sik_sapma = max(set(sapma_listes), key=sapma_listes.count)
-                if "Biyo" in en_sik_sapma: st.session_state['ml_bias'] = {"bio": 2.5, "aero": -1.0, "lobby": 0.0}
-                elif "Rüzgar" in en_sik_sapma: st.session_state['ml_bias'] = {"bio": 0.0, "aero": 3.0, "lobby": -1.5}
-                elif "Lobi" in en_sik_sapma: st.session_state['ml_bias'] = {"bio": -1.0, "aero": 0.0, "lobby": 3.5}
-            
-            for row in hist:
-                if str(row.get("Tarih", "")).startswith(date_str):
-                    if row.get("Kosu_No") == "BÜLTEN_DATA":
-                        st.session_state['quantum_results'] = json.loads(row.get("Detay", "[]"))
-                        st.session_state['num_races'] = len(st.session_state['quantum_results'])
-                        st.session_state['analyzed'] = True
-                    elif row.get("Kosu_No") == "TOPLU":
-                        st.session_state['past_results_text'] = row.get("Detay", "")
-        except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
-            st.sidebar.warning(f"⚠️ Bulut arşivine ulaşılamadı: {e}")
+            yanit = requests.get(API_URL, timeout=10); yanit.raise_for_status()
+            for satir in yanit.json():
+                if str(satir.get("Tarih", "")) != date_str:
+                    continue
+                if satir.get("Kosu_No") == "BÜLTEN_DATA":
+                    st.session_state["quantum_results"] = json.loads(satir.get("Detay", "[]"))
+                    st.session_state["analyzed"] = True
+                elif satir.get("Kosu_No") == "AGIRLIKLAR" and SHA_TIN_HAZIR:
+                    try:
+                        st.session_state["ogrenme_agirliklari"] = json.loads(satir.get("Detay", "{}")).get(
+                            "w", st.session_state["ogrenme_agirliklari"])
+                    except (ValueError, AttributeError):
+                        pass
+        except (requests.RequestException, ValueError) as e:
+            st.sidebar.warning(f"Bulut arşivine ulaşılamadı: {e}")
 
-# SAFKAN SAYAÇ KÖPRÜSÜ
-if 'quantum_results' in st.session_state and st.session_state['quantum_results']:
-    all_times = [r.get('time', '13:30') for r in st.session_state['quantum_results']]
-    all_times.sort()
-    now_h_m = time.strftime("%H:%M")
-    future_times = [t for t in all_times if t > now_h_m]
-    next_race_time = future_times[0] if future_times else all_times[0]
-else:
-    next_race_time = "13:30"
+res = st.session_state["quantum_results"]
+menu = st.session_state["menu"]
 
-# KORUMALI KRONOMETRE VE GERİ SAYIM ENJEKSİYONU (.REPLACE MİZANPAJIYLA KESKİN GÜVENCE)
-clock_raw_js = """
-<div style="text-align: center; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: CARD_BG; padding: 12px; border-radius: 12px; border: 1px solid BORDER_COLOR; color: TEXT_COLOR;">
-    <div id="js-date" style="font-size: 12px; color: SUBTEXT_COLOR; font-weight: bold; margin-bottom: 2px;">YÜKLENİYOR...</div>
-    <div id="js-clock" style="font-size: 26px; color: #58a6ff; font-weight: bold; font-family: monospace; letter-spacing: 1px;">00:00:00</div>
-    <div id="js-countdown" style="font-size: 11px; color: #238636; font-weight: bold; font-family: monospace; margin-top: 3px; letter-spacing: 0.5px;">KOŞU SAYACI SENKRONİZE EDİLİYOR...</div>
-</div>
-<script>
-function syncTime() {
-    const now = new Date();
-    document.getElementById('js-date').innerText = now.toLocaleDateString('tr-TR', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
-    document.getElementById('js-clock').innerText = now.toLocaleTimeString('tr-TR', {hour12: false});
-    
-    const [targetH, targetM] = "NEXT_RACE_TIME".split(':');
-    const target = new Date();
-    target.setHours(parseInt(targetH), parseInt(targetM), 0);
-    
-    let diff = target - now;
-    if (diff < 0) {
-        document.getElementById('js-countdown').innerText = "⏱️ HEDEF KOŞU (NEXT_RACE_TIME) BAŞLADI / TAMAMLANDI";
-    } else {
-        let m = Math.floor(diff / 60000);
-        let s = Math.floor((diff % 60000) / 1000);
-        document.getElementById('js-countdown').innerText = "⏱️ SONRAKİ GERÇEK KOŞU (NEXT_RACE_TIME) KALAN SÜRE: " + String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
-    }
-}
-setInterval(syncTime, 1000); syncTime();
-</script>
-"""
-clock_final_js = clock_raw_js.replace('CARD_BG', card_bg).replace('BORDER_COLOR', border_color).replace('TEXT_COLOR', text_color).replace('SUBTEXT_COLOR', sub_text).replace('NEXT_RACE_TIME', next_race_time)
-components.html(clock_final_js, height=105)
 
-# MİKRO İNLİNE TAKVİM VE MOBİL UYUMLU TELEMETRİ ALANI
-layout_col1, layout_col2 = st.columns([1.1, 1])
+# ---------------------------------------------------------------- YARDIMCILAR
+def kategori_rozetleri(h):
+    return (f"<span class='rozet'>Form %{h.get('bio', 0):.0f}</span>"
+            f"<span class='rozet'>Rating %{h.get('aero', 0):.0f}</span>"
+            f"<span class='rozet'>İnsan %{h.get('lobby', 0):.0f}</span>"
+            f"<span class='rozet'>Koşul %{h.get('syn', 0):.0f}</span>")
 
-with layout_col1:
-    cal_h1, cal_h2, cal_h3 = st.columns([1,3,1])
-    with cal_h1:
-        if st.button("◀", key="prev_month"):
-            st.session_state['cal_month'] -= 1
-            if st.session_state['cal_month'] == 0:
-                st.session_state['cal_month'] = 12
-                st.session_state['cal_year'] -= 1
-            st.rerun()
-    with cal_h2:
-        months_tr = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-        st.markdown(f"<p style='text-align:center; font-weight:bold; font-size:11px; margin-top:6px;'>{months_tr[st.session_state['cal_month']-1]} {st.session_state['cal_year']}</p>", unsafe_allow_html=True)
-    with cal_h3:
-        if st.button("▶", key="next_month"):
-            st.session_state['cal_month'] += 1
-            if st.session_state['cal_month'] == 13:
-                st.session_state['cal_month'] = 1
-                st.session_state['cal_year'] += 1
-            st.rerun()
-            
-    days_letters = ["Pz", "Sa", "Ça", "Pe", "Cu", "Ct", "Pa"]
-    cols_days = st.columns(7)
-    for idx, d_let in enumerate(days_letters):
-        cols_days[idx].markdown(f"<p style='text-align:center;font-weight:bold;font-size:9px;margin:0;color:{sub_text};'>{d_let}</p>", unsafe_allow_html=True)
-        
-    cal_engine = calendar.Calendar(firstweekday=0)
-    month_matrix = cal_engine.monthdayscalendar(st.session_state['cal_year'], st.session_state['cal_month'])
-    
-    for week in month_matrix:
-        cols_week = st.columns(7)
-        for idx, day_num in enumerate(week):
-            if day_num == 0:
-                cols_week[idx].write("")
-            else:
-                target_loop_date = f"{st.session_state['cal_year']}-{str(st.session_state['cal_month']).zfill(2)}-{str(day_num).zfill(2)}"
-                is_active_day = (st.session_state['selected_date_str'] == target_loop_date)
-                if cols_week[idx].button(str(day_num), key=f"btn_cal_{target_loop_date}", type="primary" if is_active_day else "secondary"):
-                    st.session_state['selected_date_str'] = target_loop_date
-                    st.rerun()
 
-with layout_col2:
-    if st.session_state['analyzed'] and st.session_state['quantum_results']:
-        hipo_val = "İSTANBUL / SHA TIN REZONANSI" if len(st.session_state['quantum_results']) > 8 else "İSTANBUL MULTI-PİST"
-        hava_val = "GÜNEŞLİ / SAHA SICAKLIĞI 28°C"
-        kum_val = "STABİL AGGREGATE MATRİS"
-        cim_val = "3.4 (YARIŞA UYGUN NORMAL)"
+def kosu_karti(r, ilk_n=None):
+    atlar = [h for h in r["horses"] if not h.get("yedek")]
+    gorunen = atlar[:ilk_n] if ilk_n else atlar
+    satirlar = ""
+    for i, h in enumerate(gorunen, 1):
+        alt = " · ".join(x for x in [h.get("jockey") or h.get("jockey_full") or "",
+                                     f"Draw {h.get('draw') or h.get('start') or '—'}",
+                                     f"Rt {h.get('rt') if h.get('rt') is not None else h.get('hp', '—')}"] if x)
+        satirlar += (f"<div class='at-satir'><div class='sira'>{i}.</div>"
+                     f"<div class='atno'>{h['num']}</div>"
+                     f"<div><div class='atadi'>{h['name']}</div><div class='atalt'>{alt}</div></div>"
+                     f"<div class='bar-kap'><div class='bar-ic' style='width:{min(100, h.get('score', 0))}%'></div></div>"
+                     f"<div class='skor'>{h.get('score', 0)}</div></div>")
+    yedek_not = ", ".join(f"{h['num']} {h['name']}" for h in r["horses"] if h.get("yedek"))
+    if yedek_not:
+        satirlar += f"<div class='atalt' style='padding-top:6px'>Yedekler: {yedek_not}</div>"
+    st.markdown(
+        f"<div class='kart'><div class='kosu-baslik'><div class='kosu-no'>{r['race_no']}</div>"
+        f"<div><b>{r.get('name', 'KOŞU')}</b><div class='kosu-meta'>{r.get('time', '')} · "
+        f"{r.get('distance', '')}m · {r.get('surface', '')} · {r.get('class', '')}</div></div></div>"
+        f"{satirlar}</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------- PDF RAPORU
+def rapor_html(analiz, tarih, agirliklar):
+    """Beyaz zemin, siyah metin, Candara — matbu racecard estetiğinde A4 rapor."""
+    try:
+        guzel_tarih = datetime.date.fromisoformat(tarih).strftime("%d.%m.%Y")
+    except ValueError:
+        guzel_tarih = tarih
+    kosu_bloklari = ""
+    for r in analiz:
+        atlar = [h for h in r["horses"] if not h.get("yedek")][:5]
+        satirlar = "".join(
+            f"<tr><td class='n'>{i}</td><td class='n'>{h['num']}</td><td class='ad'>{h['name']}</td>"
+            f"<td>{h.get('jockey') or h.get('jockey_full') or '—'}</td>"
+            f"<td class='n'>{h.get('rt', h.get('hp')) if h.get('rt', h.get('hp')) is not None else '—'}</td>"
+            f"<td class='n'>{h.get('draw', h.get('start')) or '—'}</td>"
+            f"<td class='n'>{h.get('bio', 0):.0f}</td><td class='n'>{h.get('aero', 0):.0f}</td>"
+            f"<td class='n'>{h.get('lobby', 0):.0f}</td><td class='n'>{h.get('syn', 0):.0f}</td>"
+            f"<td class='n skor'>{h.get('score', 0)}</td></tr>"
+            for i, h in enumerate(atlar, 1))
+        kosu_bloklari += f"""
+        <div class="kosu">
+          <div class="kbaslik"><span class="kno">{r['race_no']}</span>
+            <span class="kad">{r.get('name', 'KOŞU')}</span>
+            <span class="kmeta">{r.get('time', '')} · {r.get('distance', '')}m · {r.get('surface', '')} · {r.get('class', '')}</span></div>
+          <table><thead><tr><th>Sıra</th><th>No</th><th>At</th><th>Jokey</th><th>Rt</th><th>Draw</th>
+            <th>Form</th><th>Rating</th><th>İnsan</th><th>Koşul</th><th>Skor</th></tr></thead>
+          <tbody>{satirlar}</tbody></table>
+        </div>"""
+    agirlik_satiri = " · ".join(f"{KATEGORI_ADLARI[k]} %{v*100:.0f}" for k, v in (agirliklar or {}).items()) \
+        if SHA_TIN_HAZIR and agirliklar else "varsayılan"
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      @page {{ size:A4; margin:16mm 14mm; }}
+      body {{ font-family: Candara, 'DejaVu Sans', sans-serif; color:#111; font-size:10.5px; }}
+      .ust {{ border-bottom:3px solid #111; padding-bottom:6px; margin-bottom:12px;
+              display:flex; justify-content:space-between; align-items:baseline; }}
+      .marka {{ font-size:22px; font-weight:700; letter-spacing:1px; }}
+      .tarih {{ font-size:13px; color:#555; }}
+      .kosu {{ margin-bottom:12px; page-break-inside:avoid; }}
+      .kbaslik {{ border-bottom:1.5px solid #111; padding-bottom:3px; margin-bottom:4px; }}
+      .kno {{ background:#111; color:#fff; font-weight:700; padding:2px 8px; border-radius:3px; margin-right:8px; }}
+      .kad {{ font-weight:700; }} .kmeta {{ color:#666; font-size:9.5px; margin-left:8px; text-transform:uppercase; }}
+      table {{ width:100%; border-collapse:collapse; }}
+      th {{ text-align:left; color:#666; font-weight:600; font-size:9px; text-transform:uppercase;
+            border-bottom:1px solid #bbb; padding:2px 4px; }}
+      td {{ padding:3px 4px; border-bottom:1px solid #eee; }}
+      td.n {{ text-align:center; font-variant-numeric:tabular-nums; }}
+      td.ad {{ font-weight:700; }} td.skor {{ font-weight:700; }}
+      tbody tr:first-child td {{ background:#F2F2F2; }}
+      .alt {{ margin-top:10px; border-top:1px solid #bbb; padding-top:6px; color:#666; font-size:8.5px; }}
+    </style></head><body>
+      <div class="ust"><div class="marka">AVELOR — GÜNLÜK TAHMİN RAPORU</div>
+        <div class="tarih">{guzel_tarih}</div></div>
+      {kosu_bloklari}
+      <div class="alt">Skorlar, resmi racecard verilerinden (rating, form, jokey/antrenör istatistikleri,
+      12 aylık draw tabloları, deneme koşuları, veteriner kayıtları) hesaplanan 30 kriterin ağırlıklı
+      ortalamasıdır. Aktif ağırlıklar: {agirlik_satiri}. Bu rapor bir kazanç garantisi değildir;
+      sorumlu oynayın.</div>
+    </body></html>"""
+
+
+# ================================================================ MASA
+if menu == "Masa":
+    st.markdown("# Masa")
+    st.caption(f"{secili_tarih.strftime('%d.%m.%Y')} yarış günü")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Yüklü bülten", f"{len(res)} koşu" if res else "yok")
+    c2.metric("Puanlanan at", sum(len(r["horses"]) for r in res) if res else 0)
+    top1 = sum(x["top1"] for x in st.session_state["isabet_gecmisi"])
+    islenen = sum(x["n"] for x in st.session_state["isabet_gecmisi"])
+    c3.metric("Bu oturum isabet (1. tahmin)", f"{top1}/{islenen}" if islenen else "—")
+
+    if not res:
+        st.info("Bu tarihe yüklü bülten yok. **Bülten** ekranından racecard PDF'ini yükleyin "
+                "ya da TJK/HKJC'den otomatik çekin.")
     else:
-        hipo_val, hava_val, kum_val, cim_val = "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳", "BEKLEMEDE ⏳"
-        
-    st.markdown(f"""
-    <div class="quant-card" style="margin-top:5px; height:152px; padding:12px; box-sizing: border-box; overflow: hidden;">
-        <h5 style="margin-top:0; color:{accent_color}; font-size: min(13px, 3.5vw); font-family:monospace; margin-bottom: 6px; white-space: nowrap; text-overflow: ellipsis;">📡 ANLIK PİST TELEMETRİ ALANI</h5>
-        <p>📍 <b>Hipodrom:</b> {hipo_val}</p>
-        <p>☁️ <b>Hava Durumu:</b> {hava_val}</p>
-        <p>⏳ <b>Kum Ölçümü:</b> {kum_val}</p>
-        <p>🏟️ <b>Çim Ölçümü:</b> {cim_val}</p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown("### Günün öne çıkanları")
+        onecikan = sorted((r for r in res if r["horses"]),
+                          key=lambda r: r["horses"][0].get("score", 0), reverse=True)[:3]
+        for r in onecikan:
+            kosu_karti(r, ilk_n=3)
 
-st.write("---")
+    if st.session_state["isabet_gecmisi"]:
+        st.markdown("### Öğrenme geçmişi (bu oturum)")
+        st.table(pd.DataFrame(st.session_state["isabet_gecmisi"]).rename(columns={
+            "tarih": "Tarih", "n": "Koşu", "top1": "1. isabet", "top3": "İlk-3 isabet"}))
 
-# 📊 3+3 NAVİGASYON PANELİ (TEK TIKLAMA AKIŞI ST.RERUN KİLİTLİDİR)
-m_row1_col1, m_row1_col2, m_row1_col3 = st.columns(3)
-with m_row1_col1:
-    if st.button("📊 Dashboard", type="primary" if st.session_state['active_menu'] == 'Dashboard' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Dashboard'
-        st.rerun()
-with m_row1_col2:
-    if st.button("📋 Bülten Yükle", type="primary" if st.session_state['active_menu'] == 'Bülten' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Bülten'
-        st.rerun()
-with m_row1_col3:
-    if st.button("🔬 Analiz Matrisi", type="primary" if st.session_state['active_menu'] == 'Analiz' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Analiz'
-        st.rerun()
+# ================================================================ BÜLTEN
+elif menu == "Bülten":
+    st.markdown("# Bülten")
+    st.caption("Racecard PDF'i yükleyin ya da programı doğrudan siteden çekin. "
+               "Her kriter kaynağındaki gerçek veriden hesaplanır.")
 
-m_row2_col1, m_row2_col2, m_row2_col3 = st.columns(3)
-with m_row2_col1:
-    if st.button("📝 Analiz Detay", type="primary" if st.session_state['active_menu'] == 'Analiz Detay' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Analiz Detay'
-        st.rerun()
-with m_row2_col2:
-    if st.button("🎟️ Tahmin Kartları", type="primary" if st.session_state['active_menu'] == 'Tahmin' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Tahmin'
-        st.rerun()
-with m_row2_col3:
-    if st.button("🛡️ Yarış Sonuçları", type="primary" if st.session_state['active_menu'] == 'Yarış Sonuçları' else "secondary", use_container_width=True):
-        st.session_state['active_menu'] = 'Yarış Sonuçları'
-        st.rerun()
+    sek1, sek2 = st.tabs(["📄 Sha Tin PDF (önerilen)", "🌐 Siteden çek"])
 
-st.write("---")
-
-# 🧠 TRUE NLP PARSER MOTORU (PDF İÇİNDEKİ GERÇEK SAFKANLARI VE PROGRAM NUMARALARINI AYIKLAR)
-def run_quantum_core(text_input, num_races, w_bio, w_aero, w_lobby, w_atmos):
-    blocks = re.split(r'(?i)(?:koşu|kosu|race|class\s+\d)', text_input)
-    race_blocks = [b for b in blocks if len(b.strip()) > 30]
-
-    # DÜZELTME: Koşu sayısı 8'e sabitlenmişti. Bültenden gerçek koşu sayısını tespit et,
-    # tespit edilemezse verilen değere geri dön (1-12 aralığında sınırla).
-    detected = len(race_blocks)
-    if 1 <= detected <= 12:
-        num_races = detected
-    
-    races = []
-    medals = ["🥇 Birincil Alpha", "🥈 İkincil Plase", "🥉 Spekülatif Pusu", "🏅 Varyans Kalkanı"]
-    
-    # 👑 880 SATIRLI SİS DATA: Komple 80 Farklı Safkanın Sabit Telemetri Konfigürasyon Veri Bankası
-    names = [
-        "TYCOON RESOURCES", "GOLDEN ELIXIR", "FLYING PHANTOM", "SILVER LINING", "FAMILY FORTUNE",
-        "SOLAR WINDS", "PACKING CHAMP", "NINJA WARRIOR", "SPEEDY DRAGON", "THUNDERBOLT",
-        "LUCKY STAR", "IRON KING", "ZEALOUS BOY", "MASTER OF ALL", "ROYAL COMMAND",
-        "MAJESTIC FLAME", "CRIMSON VELOCITY", "EMPEROR STRIKE", "MIDNIGHT RUNNER", "SHADOW DANCER",
-        "LIGHTNING BOLT", "VICTORY LAP", "OCEAN STORM", "DESERT FOX", "WILD BLIZZARD",
-        "CELERITY PRIME", "GALAXY CHASER", "ZENITH FORCE", "ALPHA WARRIOR", "PEGASUS WINGS",
-        "PHOENIX RISING", "AURORA BOREALIS", "VORTEX RIDER", "NEBULA ECLIPSE", "COSMIC TURF",
-        "CHRONO STRIDER", "TITANIC GLORY", "EBRU SPIRIT", "ANATOLIAN WIND", "ASLAN PRIDE",
-        "BOSPHORUS KING", "BLACK PEARL", "SOUTHERN CROSS", "NORTHERN STAR", "ECLIPSE CHASER",
-        "REBEL HEART", "FOREVER FREE", "GLADIATOR SOUL", "VALIANT KNIGHT", "TEMPEST FLITE",
-        "MYSTIC HORIZON", "INFINITE ALPHA", "LEGENDARY DASH", "SUPREME COMMAND", "BRAVEHEART",
-        "SILVER FOX", "GOLDEN ARROW", "SWIFT CORSAIR", "NIGHTHAWK", "BLAZING SADDLE",
-        "STALLION X", "VELOCITY PRIME", "AERO FORCE", "BIOMETRIC STAR", "LOBBY CHIEF",
-        "QUANTUM RUN", "MATRIX GLIDE", "TELEMETRY KING", "SENTINEL DASH", "MONTE CARLO",
-        "FINTECH PRIDE", "ALPHA ECLIPSE", "TURF MONSTER", "RACE CHASER", "SPEED KING",
-        "STORM BREAKER", "DARK KNIGHT", "IRON CLAD", "PHANTOM STRIKE", "BOLD EMPEROR"
-    ]
-    # DÜZELTME: 'digest' tanımlanmadan kullanılıyordu -> NameError ile uygulama çöküyordu.
-    digest = hashlib.md5(text_input.encode("utf-8", errors="ignore")).hexdigest()
-    bias = st.session_state.get('ml_bias', {"bio": 0, "aero": 0, "lobby": 0})
-    seed_offset = int(digest[0:2], 16) % 20
-    
-    for i in range(1, num_races + 1):
-        extracted_horses = []
-        if len(race_blocks) >= i:
-            current_block = race_blocks[i-1]
-            raw_finds = re.findall(r'(\d+)\s*[-./]\s*([A-ZÇĞİÖŞÜ\s]{3,22})', current_block)
-            for num_str, name_str in raw_finds:
-                c_name = name_str.strip()
-                if len(c_name) > 3 and not any(x in c_name for x in ["KG", "DB", "SK", "GÜN", "TL", "KOŞU"]):
-                    extracted_horses.append({"num": int(num_str), "name": c_name})
-        
-        if len(extracted_horses) < 4:
-            for f_idx in range(6):
-                h_num = f_idx + 1
-                if h_num not in [h["num"] for h in extracted_horses]:
-                    extracted_horses.append({"num": h_num, "name": names[(i * 6 + f_idx + seed_offset) % len(names)]})
-                    
-        unique_horses = []
-        seen_nums = set()
-        for h in extracted_horses:
-            if h["num"] not in seen_nums:
-                seen_nums.add(h["num"])
-                unique_horses.append(h)
-        unique_horses = unique_horses[:6]
-        
-        race_horses = []
-        for rank, h_data in enumerate(unique_horses):
-            h_num = h_data["num"]
-            h_name = h_data["name"]
-            
-            b_score = round((94 - rank*5 + (h_num%3)) * (w_bio/100.0) + bias.get("bio", 0.0), 1)
-            a_score = round((93 - rank*6 - (h_num%2)) * (w_aero/100.0) + bias.get("aero", 0.0), 1)
-            l_score = round((92 - rank*4 + (h_num%4)) * (w_lobby/100.0) + bias.get("lobby", 0.0), 1)
-            gen_score = round((b_score + a_score + l_score) / 3.0, 2)
-            
-            sinerji = round(78.5 - rank*3 + (h_num * 3) % 15, 1)
-            agf = round(140.0 / (2.0 + rank + (h_num % 3)), 1)
-            is_val = (rank == 0) and (gen_score > (agf + 12.0))
-            galop_time = f"{round(23.6 + rank*0.3, 1)} - {round(35.8 + rank*0.4, 1)}"
-            
-            race_horses.append({
-                "medal": medals[rank] if rank < 4 else f"👑 Sıralı Safkan #{rank+1}",
-                "num": h_num, "name": h_name, "score": gen_score,
-                "bio": b_score, "aero": a_score, "lobby": l_score, "syn": sinerji, "val": is_val, "agf": agf, "galop": galop_time
-            })
-            
-        r_time = f"{12 + i}:00"
-        races.append({"race_no": i, "time": r_time, "horses": race_horses})
-    return races
-
-# ==================== SEKME İÇERİKLERİ ====================
-
-# SAYFA: DASHBOARD (👑 SIKIŞTIRILMIŞ VE YAN YANA METRİX TABLO ALANI)
-if st.session_state['active_menu'] == 'Dashboard':
-    st.markdown("### 🚨 O Günün Dikkat Edilmesi Gereken Kritik Bilgileri")
-    if st.session_state['analyzed'] and st.session_state['quantum_results']:
-        res_data = st.session_state['quantum_results']
-        val_count = sum([1 for r in res_data if r['horses'][0]['val']])
-        st.markdown(f"""
-        <div class="intel-box">
-            <b>📡 METRIQX SAHA İSTİHBARAT NOTLARI ({date_str}):</b><br>
-            • <b>Pist Gradyanı:</b> Sentinel-2 verilerine göre zemin nem emilimi kararlı.<br>
-            • <b>Arbitraj Hacmi:</b> Güncel bültende toplam <b>{val_count} farklı koşuda</b> 'Value Bet' fırsatı algılandı.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Sıkıştırılmış Yan Yana Tablolar
-        dash_cols = st.columns(2)
-        with dash_cols[0]:
-            st.markdown("### 📊 Eksiksiz AGF Matrisi")
-            agf_rows = [[f"{r['race_no']}.K", f"#{h['num']} {h['name']}", f"%{h['agf']}", f"{h['score']}"] for r in res_data for h in r['horses']]
-            st.table(pd.DataFrame(agf_rows, columns=["Koşu", "Safkan", "AGF", "Skor"]))
-            
-        with dash_cols[1]:
-            st.markdown("### ⏱️ Eksiksiz Galop Matrisi")
-            galop_rows = [[f"{r['race_no']}.K", f"#{h['num']} {h['name']}", h['galop'], f"%{h['syn']} Syn"] for r in res_data for h in r['horses']]
-            st.table(pd.DataFrame(galop_rows, columns=["Koşu", "Safkan", "Galop", "Sinerji"]))
-        st.success(f"📊 ÖNEMLİ BULUT ARŞİVİ: {date_str} tarihli bülten başarıyla çağrıldı!")
-    else:
-        st.markdown(f"""
-        <div class="intel-box" style="border-left-color: #58a6ff; background-color: {card_bg};">
-            <b>📡 SİSTEM BEKLEMEDE ({date_str}):</b><br>
-            • Veri havuzunda bu güne ait aktif bülten analizi henüz tetiklenmedi.<br>
-            • Aşağıdaki grafik göstergeleri genel tarihsel baseline model performans verilerini simüle etmektedir.<br>
-            • Canlı verileri, AGF ve Galop tablolarını kilitlemek için lütfen <b>Bülten Yükle</b> sekmesine geçip bülteni enjekte edin.
-        </div>
-        """, unsafe_allow_html=True)
-        st.info(f"💡 {date_str} tarihine ait yüklenmiş bülten bulunamadı. Bülten yüklemesi yapabilirsiniz.")
-
-    # 👑 REPLACE MODELİ ÇIKIŞ DİYAGRAMLARI (NAME ERROR EBEDİYEN İMHA EDİLDİ)
-    st.markdown("#### 📊 Terminal Gelişmiş Finansal Gösterge Tablosu")
-    chart_template_js = """
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <div style="display: flex; flex-direction: column; gap: 20px;">
-        <div><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:12px;">📈 ROI & Kasa Büyüme Trend İvmesi</h5><canvas id="ctxRoi" height="60"></canvas></div>
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;"><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🏟️ Pist Türü Başarı Endeksi</h5><canvas id="ctxPist" height="110"></canvas></div>
-            <div style="flex: 1;"><h5 style="color:SUBTEXT_COLOR; margin:0 0 5px 0; font-family:sans-serif; font-size:11px;">🍩 Kupon Şablon İsabet Dağıluş Yüzdesi</h5><canvas id="ctxDonut" height="110"></canvas></div>
-        </div>
-    </div>
-    <script>
-    new Chart(document.getElementById('ctxRoi'), {
-        type: 'line',
-        data: {
-            labels: ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', 'Mevcut'],
-            datasets: [{ label: 'Net Alpha', data: [100, 114, 138, 129, 164], borderColor: '#1f6feb', tension: 0.3, fill: false }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { ticks: { color: 'SUBTEXT_COLOR' } }, x: { ticks: { color: 'SUBTEXT_COLOR' } } }
-        }
-    });
-    new Chart(document.getElementById('ctxPist'), {
-        type: 'bar',
-        data: {
-            labels: ['Çim', 'Kum', 'Sentetik'],
-            datasets: [{ data: [84, 76, 92], backgroundColor: ['#238636', '#e3a008', '#1f6feb'] }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { max:100, ticks: { color: 'SUBTEXT_COLOR' } }, x: { ticks: { color: 'SUBTEXT_COLOR' } } }
-        }
-    });
-    new Chart(document.getElementById('ctxDonut'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Yıkım', 'Denge', 'Alpha', 'Misli'],
-            datasets: [{ data: [40, 25, 20, 15], backgroundColor: ['#1f6feb', '#e3a008', '#a855f7', '#238636'], borderWidth: 0 }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'right', labels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }
-        }
-    });
-    </script>
-    """.replace('SUBTEXT_COLOR', sub_text)
-    components.html(chart_template_js, height=350)
-    
-    st.write("---")
-    st.markdown("### 🧬 METRIQX CORE-40 MATRIX PROTOCOLS")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("""<div class="showoff-container"><div class="showoff-title">🛡️ BİYO-MEKANİK & HÜCRESEL DATA (10/10)</div><div class="showoff-grid"><div>• Kas Lifi Titreşim Eşiği Analizi</div><div>• Laktat Birikim Simülasyon Vektörü</div><div>• Padok Kalp Ritim Değişkenliği</div><div>• Tırnak-Zemin Basınç Endeksi</div><div>• Eklem Viskozite Rezonansı</div><div>• Solunum Geri Kazanım Hızı</div><div>• Hücresel Dehidrasyon Toleransı</div><div>• Glikojen Sönümleme Katsayısı</div><div>• Adım Frekansı Senkronizasyonu</div><div>• Mikro-Postür Stabilite İndeksi</div></div></div><div class="showoff-container"><div class="showoff-title">🕸️ NLP & SOSYO-POLİTİK LOBİ DETEKTÖRÜ (10/10)</div><div class="showoff-grid"><div>• Medya Beyanat Sapması (Deception Delta)</div><div>• Asimetrik Son Saniye Bahis Yoğunluğu</div><div>• Jokey-Ahır Tarihsel Diyet Paktı</div><div>• Ahırlar Arası Gizli İttifak Fısıltıları</div><div>• Ahır İçi Spekülatif Bilgi Akışı</div><div>• Medya Aldatıcı Algı İndikatörü</div><div>• AGF Kamu Yanılgı Katsayısı</div><div>• Sahiplik Network Güç Şebekesi</div><div>• Jokey Deklare Manipülasyon Belgesi</div><div>• Sündika İçi Akıllı Para Sızıntısı</div></div></div>""", unsafe_allow_html=True)
-    with col_b:
-        st.markdown("""<div class="showoff-container"><div class="showoff-title">🌪️ AERODİNAMİK & VEKTÖREL DİNAMİKLER (10/10)</div><div class="showoff-grid"><div>• Kulvar Merkezkaç Kuvvet Sapması</div><div>• Bariyer Dibi Vakum Koridoru Advantage</div><div>• Rüzgar Duvarı Sürtünme Katsayısı (Fd)</div><div>• Jokey-At Bileşke Ağırlık Merkezi</div><div>• Son Düzlük İvmelenme Torku</div><div>• Jokey Duruş Aerodinamisi (Drag)</div><div>• Kinetik Enerji Dönüşüm Oranı</div><div>• Pist Eğim Sönümleme Direnci</div><div>• Başlangıç Makinesi Reaksiyon Süresi</div><div>• Düzlük Boyu Rüzgar Rotasyonu</div></div></div><div class="showoff-container"><div class="showoff-title">📡 ATMOSFERİK & DİJİTAL İKİZ TELEMETRİSİ (10/10)</div><div class="showoff-grid"><div>• Sentinel-2 NDVI Uydu Çim Sağlık Verisi</div><div>• Anlık Pist Termal Isı İmzası Taraması</div><div>• Mikro-Meteorolojik Rüzgar Tüneli</div><div>• Barometrik Basınç/Oksijen Satürasyonu</div><div>• Zemin Viskozite/Çamur Direnci</div><div>• Güneş Açısı Gölgelendirme İllüzyonu</div><div>• Pist Nem Emilim Gradyanı</div><div>• Hava Yoğunluğu (Air Density) Katsayısı</div><div>• Hipodrom Rakım/Akciğer Hacim Oranı</div><div>• Anlık Zemin Nem Değişkenliği Dalgası</div></div></div>""", unsafe_allow_html=True)
-
-# SAYFA: BÜLTEN YÜKLE
-elif st.session_state['active_menu'] == 'Bülten':
-    st.subheader("📋 Bülten Veri Enjeksiyonu")
-    st.markdown("""<p style="font-size: 13px; font-weight: 500; line-height: 1.6; margin-bottom: 15px;">💡 <b>Enjeksiyon Amacı:</b> Resmi bülten metinlerini (PDF/Metin) sisteme aktararak 40 katmanlı filtrelerden geçirmektir. Bu süreçte bültendeki <b>gerçek at isimleri ve program numaraları</b> NLP motoru tarafından otomatik olarak ayıklanır.</p>""", unsafe_allow_html=True)
-    
-    with st.expander("🎛️ Gelişmiş Kuantum Katsayı Ağırlıkları (Dinamik ML Kontrolü)", expanded=True):
-        w_bio = st.slider("Hücresel Biyo-Mekanik Faktör Önceliği", 0, 200, 100)
-        w_aero = st.slider("Vektörel Aerodinamik Sürüklenme Önceliği", 0, 200, 100)
-        w_lobby = st.slider("NLP Lobi & Akıllı Para Filtre Önceliği", 0, 200, 100)
-        w_atmos = st.slider("Atmosferik Uydu Telemetri Önceliği", 0, 200, 100)
-        
-    # 🌐 OTOMATİK BÜLTEN ÇEKİMİ — PDF'e gerek kalmadan TJK / HKJC'den canlı racecard
-    if VERI_KAYNAGI_HAZIR:
-        st.markdown("### 🌐 Otomatik Bülten Çekimi (Önerilen Yol)")
-        kaynak = st.radio("Veri Kaynağı:", ["HKJC Sha Tin", "HKJC Happy Valley", "TJK (Türkiye)"], horizontal=True)
-        sehir_secim = None
-        if kaynak == "TJK (Türkiye)":
-            sehir_secim = st.selectbox("Hipodrom:", ["İstanbul", "Bursa", "İzmir", "Ankara", "Adana",
-                                                     "Şanlıurfa", "Elazığ", "Diyarbakır", "Antalya", "Kocaeli"])
-        if st.button("🌐 SEÇİLİ TARİHİN BÜLTENİNİ ÇEK VE PUANLA", use_container_width=True):
-            with st.spinner("Racecard indiriliyor ve form skorları hesaplanıyor..."):
+    with sek1:
+        if not SHA_TIN_HAZIR:
+            st.error("sha_tin_motoru.py bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
+        pdf = st.file_uploader("HKJC günlük racecard PDF'i (≈58 sayfa)", type=["pdf"])
+        if st.button("Bülteni ayrıştır ve 30 kriterle puanla", type="primary",
+                     disabled=not (SHA_TIN_HAZIR and pdf)):
+            with st.spinner("Rating, form, draw istatistikleri, denemeler ve veteriner kayıtları okunuyor…"):
                 try:
-                    if kaynak == "TJK (Türkiye)":
-                        cekilen = tjk_program_cek(date_str, sehir_secim)
+                    metin = "\n".join((s.extract_text() or "") for s in PdfReader(pdf).pages)
+                    if "Quick Reference" not in metin:
+                        st.error("Bu dosya HKJC racecard formatında görünmüyor ('Quick Reference' bölümü yok).")
+                    else:
+                        veri = pdf_ayristir(metin)
+                        analiz = analiz_et(veri, st.session_state["ogrenme_agirliklari"])
+                        if not analiz:
+                            st.error("Koşu ayrıştırılamadı. PDF'in 'Final Version' racecard olduğundan emin olun.")
+                        else:
+                            hedef = veri.get("tarih") or date_str
+                            st.session_state.update(quantum_results=analiz, analyzed=True, loaded_date=hedef)
+                            if API_URL:
+                                try:
+                                    requests.post(API_URL, json={"Tarih": hedef, "Kosu_No": "BÜLTEN_DATA",
+                                                                 "Gelen_At": "SYSTEM",
+                                                                 "Detay": json.dumps(analiz)}, timeout=10)
+                                except requests.RequestException as e:
+                                    st.warning(f"Buluta kaydedilemedi (analiz yerelde duruyor): {e}")
+                            st.success(f"{len(analiz)} koşu, "
+                                       f"{sum(len(r['horses']) for r in analiz)} at puanlandı. "
+                                       f"Bülten tarihi: {hedef}")
+                            st.rerun()
+                except Exception as e:
+                    st.error(f"PDF işlenemedi: {e}")
+
+    with sek2:
+        if not VERI_KAYNAGI_HAZIR:
+            st.error("veri_kaynagi.py bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
+        kaynak = st.radio("Kaynak", ["HKJC Sha Tin", "HKJC Happy Valley", "TJK (Türkiye)"], horizontal=True)
+        sehir = None
+        if kaynak.startswith("TJK"):
+            sehir = st.selectbox("Hipodrom", ["İstanbul", "Bursa", "İzmir", "Ankara", "Adana",
+                                              "Şanlıurfa", "Elazığ", "Diyarbakır", "Antalya", "Kocaeli"])
+            st.caption("Kaynak: tjk.org → Günlük Yarış Programı")
+        if st.button("Seçili tarihin programını çek", type="primary", disabled=not VERI_KAYNAGI_HAZIR):
+            with st.spinner("Program indiriliyor…"):
+                try:
+                    if kaynak.startswith("TJK"):
+                        cekilen = tjk_program_cek(date_str, sehir)
                     else:
                         cekilen = hkjc_racecard_cek(date_str, "ST" if "Sha Tin" in kaynak else "HV")
                     if not cekilen:
-                        st.error("❌ Bu tarihte seçili pistte koşu bulunamadı ya da site yapısı değişmiş. "
-                                 "Takvimden koşu olan bir günü seçtiğinizden emin olun; olmazsa aşağıdaki PDF yolunu kullanın.")
+                        st.error("Bu tarihte seçili pistte koşu bulunamadı ya da site yapısı değişmiş. "
+                                 "Sha Tin için PDF yolu daha güvenilirdir.")
                     else:
                         cekilen = form_skoru_hesapla(cekilen)
-                        st.session_state['quantum_results'] = cekilen
-                        st.session_state['analyzed'] = True
-                        st.session_state['loaded_date'] = date_str
-                        if API_URL:
-                            try:
-                                requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "BÜLTEN_DATA",
-                                                             "Gelen_At": "SYSTEM", "Detay": json.dumps(cekilen)}, timeout=10)
-                            except requests.RequestException as e:
-                                st.warning(f"⚠️ Bulut arşive yazılamadı (veriler yerelde duruyor): {e}")
-                        st.success(f"✅ {len(cekilen)} koşu çekildi ve form skoru hesaplandı.")
+                        st.session_state.update(quantum_results=cekilen, analyzed=True, loaded_date=date_str)
+                        st.success(f"{len(cekilen)} koşu çekildi ve basit form skoruyla puanlandı "
+                                   "(web verisi PDF kadar zengin değildir; 30 kriter yalnızca PDF yolunda).")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Veri çekilemedi: {e}")
-        st.write("---")
-        st.markdown("##### 📎 Alternatif: PDF / Metin ile Manuel Yükleme")
+                    st.error(f"Veri çekilemedi: {e}")
+
+# ================================================================ ANALİZ
+elif menu == "Analiz":
+    st.markdown("# Analiz")
+    if not res:
+        st.info("Önce **Bülten** ekranından veri yükleyin.")
     else:
-        st.warning("⚠️ Otomatik çekim kapalı: 'veri_kaynagi.py' dosyası bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
+        for r in res:
+            kosu_karti(r)
+            atlar = [h for h in r["horses"] if h.get("kriterler")]
+            if atlar and st.toggle(f"Koşu {r['race_no']} · 30 kriterlik tam matris", key=f"m{r['race_no']}"):
+                st.dataframe(pd.DataFrame({f"#{h['num']} {h['name'][:14]}": h["kriterler"] for h in atlar}),
+                             use_container_width=True, height=420)
+                st.caption("A Rating/Sınıf · B Form · C İnsan · D Koşul (12 aylık draw istatistiği) · "
+                           "E Hazırlık/Risk. 0–100; 50 = kaynakta veri yok (nötr).")
 
-    uploaded_pdf = st.file_uploader("Bülten PDF Dosyası Yükleyin:", type=["pdf"])
-    pasted_text = st.text_area("Veya Bülten Metnini Buraya Yapıştırın:", height=120)
-    
-    st.markdown('<div class="trigger-container">', unsafe_allow_html=True)
-    triggered = st.button("🚀 MATRIX ANALIZI TETİKLE", key="trigger_btn")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    if triggered:
-        final_text = ""
-        if uploaded_pdf is not None:
-            try:
-                reader = PdfReader(uploaded_pdf)
-                final_text = "\n".join([page.extract_text() or "" for page in reader.pages])
-                if not final_text.strip():
-                    st.error("❌ PDF'ten metin çıkarılamadı. Taranmış (görüntü) PDF olabilir; metni elle yapıştırmayı deneyin.")
-            except Exception as e:
-                st.error(f"❌ PDF okunamadı: {e}")
-        elif pasted_text.strip(): final_text = pasted_text
-            
-        if final_text.strip():
-            target_date = date_str
-            parsed_dates = re.findall(r'(\d{4}[-/.]\d{2}[-/.]\d{2})|(\d{2}[-/.]\d{2}[-/.]\d{4})', final_text)
-            if parsed_dates:
-                raw_d = [d for d in parsed_dates[0] if d][0]
-                cleaned_d = raw_d.replace('.', '-').replace('/', '-')
-                if len(cleaned_d.split('-')[0]) == 2:
-                    parts = cleaned_d.split('-')
-                    target_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
-                else: target_date = cleaned_d
+# ================================================================ DETAY
+elif menu == "Detay":
+    st.markdown("# Analiz Detayı")
+    if not res:
+        st.info("Önce **Bülten** ekranından veri yükleyin.")
+    else:
+        secim = st.selectbox("Koşu seçin", [f"Koşu {r['race_no']} — {r.get('name', '')}" for r in res])
+        r = res[[f"Koşu {x['race_no']} — {x.get('name', '')}" for x in res].index(secim)]
+        st.caption(f"{r.get('time', '')} · {r.get('distance', '')}m · {r.get('surface', '')} · {r.get('class', '')}")
 
-            res_data = None
-            # === YOL 1: HKJC SHA TIN RACECARD → 30 GERÇEK KRİTER ===
-            if SHA_TIN_HAZIR and "Quick Reference" in final_text:
-                with st.spinner("HKJC racecard ayrıştırılıyor: rating, form, draw istatistikleri, denemeler, veteriner kayıtları..."):
+        atlar = [h for h in r["horses"] if not h.get("yedek")]
+        tablo = pd.DataFrame([{
+            "Sıra": i + 1, "No": h["num"], "At": h["name"],
+            "Jokey": h.get("jockey") or h.get("jockey_full") or "—",
+            "Antrenör": h.get("trainer", "—"),
+            "Rt": h.get("rt", h.get("hp")), "Draw": h.get("draw", h.get("start")),
+            "Kilo": h.get("weight"), "Son koşular": h.get("form", h.get("last6", "")),
+            "Form": h.get("bio", 0), "Rating": h.get("aero", 0),
+            "İnsan": h.get("lobby", 0), "Koşul": h.get("syn", 0),
+            "SKOR": h.get("score", 0),
+        } for i, h in enumerate(atlar)])
+        st.dataframe(tablo, use_container_width=True, hide_index=True)
+
+        ilk3 = atlar[:3]
+        if ilk3 and ilk3[0].get("kategoriler"):
+            st.markdown("### İlk üçün kategori karşılaştırması")
+            kolonlar = st.columns(len(ilk3))
+            for kol, h in zip(kolonlar, ilk3):
+                with kol:
+                    st.markdown(f"**#{h['num']} {h['name']}** — {h['score']}")
+                    for kat, deger in h["kategoriler"].items():
+                        st.markdown(
+                            f"<div class='atalt'>{KATEGORI_ADLARI.get(kat, kat)} · {deger}</div>"
+                            f"<div class='bar-kap'><div class='bar-ic' style='width:{min(100, deger)}%'></div></div>",
+                            unsafe_allow_html=True)
+        if atlar and atlar[0].get("kriterler"):
+            st.markdown("### Kriter matrisi")
+            st.dataframe(pd.DataFrame({f"#{h['num']} {h['name'][:14]}": h["kriterler"] for h in atlar}),
+                         use_container_width=True, height=460)
+
+# ================================================================ TAHMİN
+elif menu == "Tahmin":
+    st.markdown("# Tahmin Kartları")
+    if not res:
+        st.info("Önce **Bülten** ekranından veri yükleyin.")
+    else:
+        st.caption("Banko = en yüksek toplam skor. Sürpriz = ilk üç dışında kalıp tek bir kategoride "
+                   "alanın en iyisi olan at. Hiçbir kart kazanç garantisi değildir.")
+        for r in res:
+            atlar = [h for h in r["horses"] if not h.get("yedek")]
+            if not atlar:
+                continue
+            banko, alternatif = atlar[0], atlar[1:3]
+            surpriz = None
+            for h in atlar[3:]:
+                for kat, deger in (h.get("kategoriler") or {}).items():
+                    if deger >= max((x.get("kategoriler", {}).get(kat, 0) for x in atlar), default=0):
+                        surpriz = (h, KATEGORI_ADLARI.get(kat, kat)); break
+                if surpriz:
+                    break
+            c1, c2 = st.columns([1.4, 1])
+            with c1:
+                st.markdown(
+                    f"<div class='banko'><div class='kosu-meta'>KOŞU {r['race_no']} · {r.get('time', '')}</div>"
+                    f"<h3 style='margin:4px 0'>★ #{banko['num']} {banko['name']} <span class='skor'>{banko.get('score', 0)}</span></h3>"
+                    f"{kategori_rozetleri(banko)}</div>", unsafe_allow_html=True)
+            with c2:
+                for h in alternatif:
+                    st.markdown(f"<div class='kart' style='padding:8px 12px;margin-bottom:8px'>"
+                                f"<b>#{h['num']} {h['name']}</b> — {h.get('score', 0)}<br>{kategori_rozetleri(h)}</div>",
+                                unsafe_allow_html=True)
+                if surpriz:
+                    h, kat = surpriz
+                    st.markdown(f"<div class='kart' style='padding:8px 12px;border-style:dashed'>"
+                                f"⚡ Sürpriz: <b>#{h['num']} {h['name']}</b> — {kat} kategorisinde alanın en iyisi</div>",
+                                unsafe_allow_html=True)
+
+        st.write("---")
+        st.markdown("## Kupon planlayıcı")
+        dahil = st.multiselect("Kupona girecek koşular",
+                               [r["race_no"] for r in res], default=[r["race_no"] for r in res[:6]])
+        secimler, kombinasyon = {}, 1
+        kolonlar = st.columns(3)
+        for i, r in enumerate([x for x in res if x["race_no"] in dahil]):
+            atlar = [h for h in r["horses"] if not h.get("yedek")]
+            with kolonlar[i % 3]:
+                secim = st.multiselect(f"Koşu {r['race_no']}",
+                                       [f"#{h['num']} {h['name']}" for h in atlar],
+                                       default=[f"#{atlar[0]['num']} {atlar[0]['name']}"] if atlar else [],
+                                       key=f"kupon{r['race_no']}")
+                secimler[r["race_no"]] = secim
+                kombinasyon *= max(len(secim), 1)
+        birim = st.number_input("Misli / birim bahis tutarı", min_value=0.0, value=1.0, step=0.5)
+        k1, k2 = st.columns(2)
+        k1.metric("Kombinasyon", kombinasyon)
+        k2.metric("Toplam maliyet", f"{kombinasyon * birim:,.2f}")
+
+        st.write("---")
+        st.markdown("## Rapor")
+        if not PDF_HAZIR:
+            st.warning("PDF üretimi için WeasyPrint gerekli (requirements.txt içinde mevcut; "
+                       "Streamlit Cloud'da otomatik kurulur).")
+        else:
+            if st.button("📄 Günün tahmin raporunu (PDF) oluştur", type="primary"):
+                with st.spinner("Rapor hazırlanıyor…"):
                     try:
-                        veri = pdf_ayristir(final_text)
-                        if veri["kosular"]:
-                            agirliklar = st.session_state.get('ogrenme_agirliklari', VARSAYILAN_AGIRLIKLAR)
-                            res_data = analiz_et(veri, agirliklar)
-                            if veri.get("tarih"): target_date = veri["tarih"]
-                            toplam_at = sum(len(r['horses']) for r in res_data)
-                            st.success(f"✅ {len(res_data)} koşu / {toplam_at} at, 30 gerçek kriterle puanlandı. "
-                                       f"Aktif ağırlıklar: " + ", ".join(f"{KATEGORI_ADLARI[k]} %{v*100:.0f}" for k, v in dict(agirliklar).items()))
-                        else:
-                            st.warning("⚠️ PDF'te 'Quick Reference' bulundu ama koşu ayrıştırılamadı; genel çözümleyiciye geçiliyor.")
+                        pdf_bytes = HTML(string=rapor_html(res, date_str,
+                                                           st.session_state["ogrenme_agirliklari"])).write_pdf()
+                        st.download_button("Raporu indir", data=pdf_bytes,
+                                           file_name=f"avelor_{date_str}.pdf", mime="application/pdf")
                     except Exception as e:
-                        st.error(f"❌ Sha Tin motoru hatası: {e}")
-            # === YOL 2: DİĞER METİNLER (ör. TJK yapıştırması) → genel çözümleyici ===
-            if res_data is None:
-                res_data = run_quantum_core(final_text, 8, w_bio, w_aero, w_lobby, w_atmos)
-                st.warning("ℹ️ Bu bülten HKJC racecard formatında değil; basit genel çözümleyici kullanıldı. "
-                           "TJK için 'Otomatik Bülten Çekimi' yolunu tercih edin.")
+                        st.error(f"Rapor üretilemedi: {e}")
 
-            st.session_state['quantum_results'] = res_data
-            st.session_state['analyzed'] = True
-            # DÜZELTME: Analiz farklı bir tarihe (bültenden okunan) kaydedilse bile
-            # ekranda seçili tarihle senkron kalması için seçili tarihi de güncelle.
-            st.session_state['selected_date_str'] = target_date
-            st.session_state['loaded_date'] = target_date
-            if API_URL:
-                try:
-                    requests.post(API_URL, json={"Tarih": target_date, "Kosu_No": "BÜLTEN_DATA", "Gelen_At": "SYSTEM", "Detay": json.dumps(res_data)}, timeout=10)
-                except requests.RequestException as e:
-                    st.warning(f"⚠️ Bulut arşivine kaydedilemedi (analiz yerelde duruyor): {e}")
-            st.rerun()
-
-    st.write("---")
-    st.markdown("### 🗂️ Bu Tarihe Ait Mevcut Yüklü Bülten Verileri")
-    if st.session_state['analyzed'] and st.session_state['quantum_results']:
-        st.info(f"✅ Hafıza Dolu: {date_str} tarihine ait bülten matrisi zaten bulutta yüklü durumda.")
-    else: st.warning(f"❌ {date_str} tarihine ait herhangi bir yüklü bülten matrisi bulunmuyor.")
-
-# SAYFA: ANALİZ MATRİSİ
-elif st.session_state['active_menu'] == 'Yarış Sonuçları':
-    st.subheader(f"🛡️ {date_str} Tarihli Sonuç Girişi ve Öğrenme")
-
-    # === 🧠 GERÇEK ÖĞRENME HATTI ===
-    if SHA_TIN_HAZIR and st.session_state.get('analyzed') and st.session_state.get('quantum_results') \
-            and any(h.get('kategoriler') for r in st.session_state['quantum_results'] for h in r['horses']):
-        st.markdown("### 🧠 Kazananları Gir → Model Ağırlıkları Öğrensin")
-        st.caption("Her koşunun kazananını seçin. Model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
-                   "kategori ağırlıklarını küçük adımlarla günceller. Bu gerçek ama yavaş bir öğrenmedir: "
-                   "anlamlı hale gelmesi onlarca yarış günü ister ve hiçbir zaman kazanç garantisi vermez.")
-        res = st.session_state['quantum_results']
+# ================================================================ SONUÇ & ÖĞRENME
+elif menu == "Sonuç & Öğrenme":
+    st.markdown("# Sonuç Girişi ve Öğrenme")
+    if not (SHA_TIN_HAZIR and res and any(h.get("kategoriler") for r in res for h in r["horses"])):
+        st.info("Öğrenme için bu tarihte 30 kriterli (PDF yolundan) bir analiz yüklü olmalı.")
+    else:
+        st.caption("Kazananları seçin; model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
+                   "ağırlıkları küçük adımlarla günceller. Anlamlı öğrenme onlarca yarış günü ister; "
+                   "hiçbir ağırlık kombinasyonu kazanç garantisi vermez.")
         secimler = {}
         kolonlar = st.columns(3)
         for i, r in enumerate(res):
+            atlar = [h for h in r["horses"] if not h.get("yedek")]
             with kolonlar[i % 3]:
-                atlar = [h for h in r['horses'] if not h.get('yedek')]
-                opsiyonlar = ["— seçilmedi —"] + [f"#{h['num']} {h['name']}" for h in atlar]
-                sec = st.selectbox(f"Koşu {r['race_no']} kazananı", opsiyonlar, key=f"kaz_{r['race_no']}")
+                sec = st.selectbox(f"Koşu {r['race_no']} kazananı",
+                                   ["— seçilmedi —"] + [f"#{h['num']} {h['name']}" for h in atlar],
+                                   key=f"kz{r['race_no']}")
                 if sec != "— seçilmedi —":
-                    secimler[r['race_no']] = int(sec.split()[0].replace("#", ""))
-        if st.button("🧠 SONUÇLARDAN ÖĞREN VE AĞIRLIKLARI GÜNCELLE", use_container_width=True):
+                    secimler[r["race_no"]] = int(sec.split()[0].replace("#", ""))
+        if st.button("Sonuçlardan öğren ve ağırlıkları güncelle", type="primary"):
             if not secimler:
                 st.warning("En az bir koşunun kazananını seçin.")
             else:
-                eski_w = st.session_state.get('ogrenme_agirliklari', VARSAYILAN_AGIRLIKLAR)
-                yeni_w, rapor = agirliklari_guncelle(eski_w, res, secimler)
-                st.session_state['ogrenme_agirliklari'] = yeni_w
+                yeni_w, rapor = agirliklari_guncelle(st.session_state["ogrenme_agirliklari"], res, secimler)
+                st.session_state["ogrenme_agirliklari"] = yeni_w
+                st.session_state["isabet_gecmisi"].append({"tarih": date_str, "n": rapor["kosu_sayisi"],
+                                                           "top1": rapor["top1_isabet"],
+                                                           "top3": rapor["top3_isabet"]})
                 c1, c2, c3 = st.columns(3)
-                c1.metric("İşlenen Koşu", rapor['kosu_sayisi'])
-                c2.metric("1. Tahmin İsabeti", f"{rapor['top1_isabet']}/{rapor['kosu_sayisi']}")
-                c3.metric("İlk-3 İsabeti", f"{rapor['top3_isabet']}/{rapor['kosu_sayisi']}")
-                st.write("**Yeni kategori ağırlıkları:**")
-                st.table(pd.DataFrame([{
-                    "Kategori": KATEGORI_ADLARI[k],
-                    "Yeni Ağırlık": f"%{v*100:.1f}",
-                    "Değişim": f"{rapor['degisim'][k]*100:+.2f} puan"} for k, v in yeni_w.items()]))
+                c1.metric("İşlenen koşu", rapor["kosu_sayisi"])
+                c2.metric("1. tahmin isabeti", f"{rapor['top1_isabet']}/{rapor['kosu_sayisi']}")
+                c3.metric("İlk-3 isabeti", f"{rapor['top3_isabet']}/{rapor['kosu_sayisi']}")
+                st.table(pd.DataFrame([{"Kategori": KATEGORI_ADLARI[k],
+                                        "Yeni ağırlık": f"%{v*100:.1f}",
+                                        "Değişim": f"{rapor['degisim'][k]*100:+.2f}"} for k, v in yeni_w.items()]))
                 if API_URL:
                     try:
                         requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "AGIRLIKLAR",
-                                                     "Gelen_At": "OGRENME", "Detay": json.dumps({"w": yeni_w, "rapor": {k: v for k, v in rapor.items() if k != 'detay'}})},
-                                      timeout=10)
-                        st.success("✅ Öğrenilen ağırlıklar bulut arşivine de kaydedildi.")
+                                                     "Gelen_At": "OGRENME",
+                                                     "Detay": json.dumps({"w": yeni_w})}, timeout=10)
+                        st.success("Öğrenilen ağırlıklar bulut arşivine kaydedildi.")
                     except requests.RequestException as e:
-                        st.warning(f"⚠️ Buluta yazılamadı (ağırlıklar bu oturumda geçerli): {e}")
-        st.write("---")
-
-    bulk_data = st.text_area("Yarış bittikten sonra sonuç tablosunu direkt kopyalayıp buraya yapıştırın (Copy-Paste):", height=150)
-    if st.button("🧠 TÜM GÜNÜN VERİSİNİ MATRİSE KİLİTLE") and bulk_data:
-        if API_URL:
-            payload = {"Tarih": date_str, "Kosu_No": "TOPLU", "Gelen_At": "SIRALAMA", "Sapma_Nedeni": "MANUAL_INJECT", "Detay": bulk_data}
-            try:
-                requests.post(API_URL, json=payload, timeout=10)
-                st.success("🎯 Sonuçlar kalıcı hafızaya kilitlendi! Sayfa yenileniyor...")
-                time.sleep(1)
-                st.session_state['loaded_date'] = ""
-                st.rerun()
-            except: st.error("Bağlantı hatası.")
-
-elif st.session_state['active_menu'] in ['Analiz', 'Analiz Detay', 'Tahmin']:
-    if not st.session_state['analyzed']:
-        st.info("💡 Lütfen önce 'Bülten Yükle' sekmesinden bülteninizi enjekte edin.")
-    else:
-        res = st.session_state['quantum_results']
-        
-        if st.session_state['active_menu'] == 'Analiz':
-            exp_col1, exp_col2 = st.columns(2)
-            with exp_col1:
-                if st.button("🔓 Tüm Koşuların Detayını Aç", use_container_width=True): st.session_state['expand_matrix'] = True
-            with exp_col2:
-                if st.button("🔒 Tüm Koşuların Detayını Kapat", use_container_width=True): st.session_state['expand_matrix'] = False
-                
-            for r in res:
-                val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-                with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Hücresel Vektör Dağılım Kartı{val_title}", expanded=st.session_state['expand_matrix']):
-                    col_text, col_chart = st.columns([1.2, 1])
-                    with col_text:
-                        for h in r['horses']:
-                            v_marker = " 👑 [VALUE]" if h['val'] else ""
-                            st.markdown(f"**{h['medal']} #{h['num']} {h['name']} (Skor: {h['score']}){v_marker}**\n* 📈 Form: %{h['bio']} | 🎯 Rating: %{h['aero']} | 👤 İnsan F.: %{h['lobby']} | 🎲 Koşul: %{h['syn']}")
-                        if any(h.get('kriterler') for h in r['horses']):
-                            if st.toggle("🔬 30 Kriterlik Tam Matrisi Göster", key=f"krit_{r['race_no']}"):
-                                krit_df = pd.DataFrame(
-                                    {f"#{h['num']} {h['name'][:14]}": h['kriterler'] for h in r['horses'] if h.get('kriterler')}
-                                )
-                                st.dataframe(krit_df, use_container_width=True, height=420)
-                                st.caption("Her sütun bir at, her satır PDF'ten hesaplanan gerçek bir kriter (0-100). "
-                                           "A=Rating/Sınıf, B=Form, C=İnsan, D=Koşul (12 aylık draw istatistikleri), E=Hazırlık/Risk. "
-                                           "50 = o kriter için PDF'te veri yok (nötr).")
-                    with col_chart:
-                        radar_raw_js = """
-                        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                        <canvas id="CHART_ID" height="140"></canvas>
-                        <script>
-                        new Chart(document.getElementById('CHART_ID'), {
-                            type: 'radar',
-                            data: {
-                                labels: ['Form', 'Rating', 'İnsan Faktörü'],
-                                datasets: [
-                                    { label: '#H1_NUM', data: [H1_BIO, H1_AERO, H1_LOBBY], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 },
-                                    { label: '#H2_NUM', data: [H2_BIO, H2_AERO, H2_LOBBY], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }
-                                ]
-                            },
-                            options: { responsive: true, scales: { r: { grid: { color: '#30363d' }, angleLines: { color: '#30363d' }, ticks: { display: false }, pointLabels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }, plugins: { legend: { labels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } } }
-                        });
-                        </script>
-                        """
-                        components.html(radar_raw_js.replace('CHART_ID', f"radar-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('SUBTEXT_COLOR', sub_text), height=160)
-
-        elif st.session_state['active_menu'] == 'Analiz Detay':
-            det_col1, det_col2 = st.columns(2)
-            with det_col1:
-                if st.button("🔓 Tüm Detay Gerekçelerini Aç", use_container_width=True): st.session_state['expand_detay'] = True
-            with det_col2:
-                if st.button("🔒 Tüm Detay Gerekçelerini Kapat", use_container_width=True): st.session_state['expand_detay'] = False
-                
-            for r in res:
-                val_title = " 🔥 [VALUE OPPORTUNITY DETECTED]" if r['horses'][0]['val'] else ""
-                with st.expander(f"🏇 KOŞU {r['race_no']} ({r['time']}) - Gerekçelendirilmiş Matris Raporu{val_title}", expanded=st.session_state['expand_detay']):
-                    top_c1, top_c2 = st.columns([1, 1.2])
-                    with top_c1:
-                        st.markdown(f"<p style='font-size:11px; color:{sub_text}; line-height:1.3; margin:0;'>📊 <b>Grafik Eksen Rehberi:</b><br>• <b>Biyo-Mekanik:</b> Kas fiber ivmesi torku.<br>• <b>Aerodinamik:</b> Sürtünme ve drag direnci.<br>• <b>Lobi Sinyali:</b> Ahır istihbarat network akışı.</p>", unsafe_allow_html=True)
-                    with top_c2:
-                        radar_det_raw_js = """
-                        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                        <canvas id="CHART_ID" height="110"></canvas>
-                        <script>
-                        new Chart(document.getElementById('CHART_ID'), {
-                            type: 'radar',
-                            data: {
-                                labels: ['Biyo-Mekanik', 'Aerodinamik', 'Lobi Sinyali'],
-                                datasets: [
-                                    { label: '#H1_NUM', data: [H1_BIO, H1_AERO, H1_LOBBY], backgroundColor: 'rgba(31, 111, 235, 0.2)', borderColor: '#1f6feb', borderWidth: 2 },
-                                    { label: '#H2_NUM', data: [H2_BIO, H2_AERO, H2_LOBBY], backgroundColor: 'rgba(227, 160, 8, 0.1)', borderColor: '#e3a008', borderWidth: 1 }
-                                ]
-                            },
-                            options: { responsive: true, scales: { r: { grid: { color: '#30363d' }, angleLines: { color: '#30363d' }, ticks: { display: false }, pointLabels: { color: 'SUBTEXT_COLOR', font: { size: 9 } } } }, plugins: { legend: { display: false } } }
-                        });
-                        </script>
-                        """
-                        components.html(radar_det_raw_js.replace('CHART_ID', f"radar-detay-{r['race_no']}").replace('H1_NUM', str(r['horses'][0]['num'])).replace('H1_BIO', str(r['horses'][0]['bio'])).replace('H1_AERO', str(r['horses'][0]['aero'])).replace('H1_LOBBY', str(r['horses'][0]['lobby'])).replace('H2_NUM', str(r['horses'][1]['num'])).replace('H2_BIO', str(r['horses'][1]['bio'])).replace('H2_AERO', str(r['horses'][1]['aero'])).replace('H2_LOBBY', str(r['horses'][1]['lobby'])).replace('SUBTEXT_COLOR', sub_text), height=130)
-                    for h in r['horses']:
-                        val_notice = "⚠️ <b>VALUE OPTION TESPİTİ:</b> Bu safkanın Kuantum Alan Skoru, piyasa beklentisinin çok üzerindedir.<br>" if h['val'] else ""
-                        st.markdown(f"""
-                        <div class="reason-box">
-                            {val_notice}
-                            <b>{h['medal']} #{h['num']} {h['name']} (Sıralama Puanı: {h['score']}/100)</b><br>
-                            Matristeki konumlandırılma ağırlığı %{h['bio']} Biyo-Mekanik kas lifi direnci og %{h['aero']} Aerodinamik drag vektör ivmesinden beslenmektedir. Ahır lobi ve akıllı para takip sistemimizden gelen %{h['lobby']} güven sinyali ve jokey-antrenör arasındaki %{h['syn']} tarihsel sinerji endeksi safkanın kupon dengelerindeki ana stratejik yerini tam olarak tescil etmektedir.
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-        elif st.session_state['active_menu'] == 'Tahmin':
-            unit_price = st.number_input("Birim Ayak Bahis Fiyatı (TL):", value=0.40, step=0.05)
-            
-            # 👑 880 SATIRLI SİS DATA: 4 Farklı Hazır Otomasyon Kupon Şablon Döngüsü ve Kombinasyon Hesaplama Motoru
-            kuponlar = {
-                "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": [],
-                "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": [],
-                "🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI": [],
-                "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": []
-            }
-            c1, c2, c3, c4 = 1, 1, 1, 1
-            for r in res:
-                n = r['race_no']
-                h = r['horses']
-                if n in [1, 2]: 
-                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}, {h[3]['num']}")
-                    c1 *= 4
-                elif n == 3: 
-                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']} (BANKO)")
-                    c1 *= 1
-                else: 
-                    kuponlar["📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}")
-                    c1 *= 3
-                if n in [2, 5]: 
-                    kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {h[0]['num']} (BANKO)")
-                    c2 *= 1
-                else: 
-                    kuponlar["⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}, {h[2]['num']}")
-                    c2 *= 3
-                if n == 1: 
-                    kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {h[0]['num']} (BANKO)")
-                    c3 *= 1
-                else: 
-                    kuponlar["🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI"].append(f"{n}.K: {h[0]['num']}, {h[1]['num']}")
-                    c3 *= 2
-                kuponlar["💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU"].append(f"{n}.K: {h[0]['num']} (BANKO)")
-                
-            maliyet_map = {
-                "📈 1. SÜNDİKA YIKIM ŞABLONU (Zor Koşuları Kapatma Sistemi)": c1 * unit_price,
-                "⚡ 2. ÇİFT BANKOLU EKONOMİK DENGE ŞABLONU": c2 * unit_price,
-                "🎯 3. AGRESİF TEKLİ KAZANÇ ARBİTRAJI": c3 * unit_price,
-                "💰 4. MİSLİ HEDEF ODAKLI ALPHA ŞABLONU": c4 * unit_price
-            }
-            
-            for title, lines in kuponlar.items():
-                color_stripe = "#1f6feb"
-                if "ÇİFT" in title: color_stripe = "#e3a008"
-                elif "AGRESİF" in title: color_stripe = "#a855f7"
-                elif "MİSLİ" in title: color_stripe = "#238636"
-                
-                st.markdown(f"""
-                <div class="premium-kupon-card" style="border-left-color: {color_stripe};">
-                    <h4 style="margin-top:0; color:{color_stripe}; font-weight:bold;">{title}</h4>
-                    <p style="font-family: monospace; font-size:14px; background-color:{bg_color}; padding:12px; border-radius:6px; border:1px solid {border_color}; line-height:1.6; color:{text_color};">
-                        {("<br>".join(lines))}
-                    </p>
-                    <div style="font-size:12px; color:{sub_text}; margin-top:8px; font-weight:bold;">
-                        📊 Kombinasyon Hacmi: {int(maliyet_map[title]/unit_price)} Adet &nbsp;|&nbsp; 💰 Tahmini Yatırma Maliyeti: {round(maliyet_map[title], 2)} TL
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            # 👑 880 SATIRLI SİS DATA: Dev Kurumsal PDF Rapor Çıktı Motoru Enjeksiyonu
-            pdf_html = f"""
-            <html>
-            <head>
-            <meta charset='utf-8'>
-            <style>
-                @page {{
-                    size: A4; margin: 20mm 12mm; background-color: #fafbfc;
-                    @bottom-right {{ content: "Sayfa " counter(page) " / " counter(pages); font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; }}
-                    @bottom-left {{ content: "METRIQX EXECUTIVE REPORT v9.6"; font-size: 8pt; color: #8b949e; font-family: Arial, sans-serif; font-weight: bold; }}
-                }}
-                body {{ font-family: Arial, sans-serif; color: #24292e; line-height: 1.4; margin: 0; padding: 0; }}
-                .banner {{ background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); padding: 25px 20px; color: #58a6ff; border-bottom: 4px solid #1f6feb; margin-bottom: 25px; }}
-                .banner h1 {{ margin: 0; font-size: 20pt; }}
-                .banner p {{ margin: 5px 0 0 0; font-size: 9pt; color: #8b949e; font-family: monospace; }}
-                .container {{ background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
-                .race-header {{ font-size: 11pt; font-weight: bold; color: #1f6feb; border-bottom: 2px solid #d0d7de; padding-bottom: 5px; margin-bottom: 12px; }}
-                table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-                th, td {{ border: 1px solid #d0d7de; padding: 8px; font-size: 8.5pt; text-align: left; }}
-                th {{ background-color: #f6f8fa; font-weight: bold; }}
-                .kupon-title {{ font-size: 11pt; font-weight: bold; color: #1f6feb; margin-top: 20px; margin-bottom: 8px; }}
-                .kupon-box {{ background: #161b22; color: #e6edf3; font-family: monospace; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #1f6feb; font-size:10.5pt; line-height:1.6; page-break-inside: avoid; }}
-                .page-break {{ page-break-before: always; }}
-            </style>
-            </head>
-            <body>
-                <div class="banner"><h1>🏇 Avelor - METRIQX RAPORU</h1><p>DATE: {date_str} // COGNITIVE QUANTUM ENGINE</p></div>
-                <h2>🔬 40 Katmanlı Süzgeç Detaylı Puan Tabloları & Sinerji Sınırları</h2>
-            """
-            for r in res:
-                pdf_html += f"""
-                <div class="container">
-                    <div class="race-header">🏇 KOŞU {r['race_no']} Derin Matris Dağılim Raporu</div>
-                    <table>
-                        <thead>
-                            <tr><th>Sıra</th><th>At No</th><th>Safkan İsmi</th><th>Genel Puan</th><th>Biyo-Mek.</th><th>Aerodin.</th><th>Lobi S.</th><th>🤝 Sinerji</th></tr>
-                        </thead>
-                        <tbody>
-                """
-                for h in r['horses']:
-                    pdf_html += f"""
-                            <tr><td>{h['medal'].split()[0] if ' ' in h['medal'] else '🏇'}</td><td><b>#{h['num']}</b></td><td><b>{h['name']}</b></td><td><b>{h['score']}</b></td><td>%{h['bio']}</td><td>%{h['aero']}</td><td>%{h['lobby']}</td><td><b>%{h['syn']}</b></td></tr>
-                    """
-                pdf_html += f"""
-                        </tbody>
-                    </table>
-                </div>
-                """
-            pdf_html += "</body></html>"
-            try:
-                pdf_bytes = HTML(string=pdf_html).write_pdf()
-                st.download_button(label="📥 SON SAYFA KORUMALI TAHMİN PDF'İNİ İNDİR", data=pdf_bytes, file_name=f"metriqx_{date_str}.pdf", mime="application/pdf")
-            except Exception as e:
-                st.error(f"❌ PDF raporu üretilemedi (WeasyPrint hatası): {e}")
-
-# SAYFAYA ÇAKILI SABİT KURUMSAL BANNER FOOTER MATRİSİ
-st.markdown('<div class="fixed-footer">Avelor Software © 2026</div>', unsafe_allow_html=True)
+                        st.warning(f"Buluta yazılamadı (ağırlıklar bu oturumda geçerli): {e}")
