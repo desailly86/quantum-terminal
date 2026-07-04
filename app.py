@@ -15,6 +15,7 @@ from pypdf import PdfReader
 # ---------------------------------------------------------------- MOTORLAR
 try:
     from sha_tin_motoru import (pdf_ayristir, analiz_et, agirliklari_guncelle,
+                                kriter_agirliklari_turet, KRITER_AGIRLIKLARI,
                                 VARSAYILAN_AGIRLIKLAR, KATEGORI_ADLARI)
     SHA_TIN_HAZIR = True
 except ImportError:
@@ -105,6 +106,7 @@ _init("quantum_results", [])
 _init("analyzed", False)
 _init("loaded_date", "")
 _init("ogrenme_agirliklari", dict(VARSAYILAN_AGIRLIKLAR) if SHA_TIN_HAZIR else None)
+_init("kriter_agirliklari", dict(KRITER_AGIRLIKLARI) if SHA_TIN_HAZIR else None)
 _init("isabet_gecmisi", [])
 
 # ---------------------------------------------------------------- YAN MENÜ
@@ -171,8 +173,10 @@ if st.session_state["loaded_date"] != date_str:
                     except ValueError: pass
                 elif kno == "AGIRLIKLAR" and SHA_TIN_HAZIR and str(satir.get("Gelen_At", "")) in (sahip, "OGRENME"):
                     try:
-                        st.session_state["ogrenme_agirliklari"] = json.loads(satir.get("Detay", "{}")).get(
-                            "w", st.session_state["ogrenme_agirliklari"])
+                        _d = json.loads(satir.get("Detay", "{}"))
+                        st.session_state["ogrenme_agirliklari"] = _d.get("w", st.session_state["ogrenme_agirliklari"])
+                        if _d.get("kw"):
+                            st.session_state["kriter_agirliklari"] = _d["kw"]
                     except (ValueError, AttributeError):
                         pass
             yuklenen = [kosu_map[k] for k in sorted(kosu_map, key=lambda x: int(x))] if kosu_map else (eski_format or [])
@@ -350,7 +354,8 @@ elif menu == "Bülten":
                         st.error("Bu dosya HKJC racecard formatında görünmüyor ('Quick Reference' bölümü yok).")
                     else:
                         veri = pdf_ayristir(metin)
-                        analiz = analiz_et(veri, st.session_state["ogrenme_agirliklari"])
+                        analiz = analiz_et(veri, st.session_state["ogrenme_agirliklari"],
+                                           st.session_state["kriter_agirliklari"])
                         if not analiz:
                             st.error("Koşu ayrıştırılamadı. PDF'in 'Final Version' racecard olduğundan emin olun.")
                         else:
@@ -586,6 +591,8 @@ elif menu == "Sonuç & Öğrenme":
                                         "Yeni ağırlık": f"%{v*100:.1f}",
                                         "Değişim": f"{rapor['degisim'][k]*100:+.2f}"} for k, v in yeni_w.items()]))
                 if rapor.get("kriter_perf"):
+                    st.session_state["kriter_agirliklari"] = kriter_agirliklari_turet(
+                        rapor["kriter_perf"], st.session_state["kriter_agirliklari"])
                     # birikimli kriter performansı (oturum boyunca)
                     birikim = st.session_state.setdefault("kriter_perf_birikim", {})
                     for kr, p in rapor["kriter_perf"].items():
@@ -605,6 +612,7 @@ elif menu == "Sonuç & Öğrenme":
                         requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "AGIRLIKLAR",
                                                      "Gelen_At": kullanici or "OGRENME",
                                                      "Detay": json.dumps({"w": yeni_w,
+                                                                          "kw": st.session_state["kriter_agirliklari"],
                                                                           "kriter_perf": rapor.get("kriter_perf", {})})},
                                       timeout=10)
                         st.success("Öğrenilen ağırlıklar ve kriter performansı bulut arşivine kaydedildi.")
