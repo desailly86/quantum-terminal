@@ -111,6 +111,13 @@ _init("isabet_gecmisi", [])
 with st.sidebar:
     st.markdown("## 🏇 AVELOR")
     st.caption("Yarış Analiz Masası — Sha Tin & TJK")
+    varsayilan_kullanici = st.query_params.get("u", "")
+    kullanici = st.text_input("Kullanıcı adı", value=varsayilan_kullanici,
+                              placeholder="ör. ali", help="Bültenleriniz bu ada kayıtlı tutulur; "
+                              "başka cihazdan aynı adı yazınca aynı verileri görürsünüz.").strip().lower()
+    if kullanici and st.query_params.get("u", "") != kullanici:
+        st.query_params["u"] = kullanici
+        st.session_state["loaded_date"] = ""  # kullanıcı değişti → yeniden yükle
     secili_tarih = st.date_input("Yarış günü", datetime.date.today(), format="DD.MM.YYYY")
     date_str = secili_tarih.isoformat()
     st.write("---")
@@ -127,23 +134,50 @@ with st.sidebar:
             st.caption(f"{KATEGORI_ADLARI[k]}: %{v*100:.0f}")
 
 # ---------------------------------------------------------------- BULUT YÜKLEME
+# ---------------------------------------------------------------- BULUT KALICI HAFIZA
+def buluta_kaydet(analiz, tarih):
+    """Analizi koşu başına satır olarak kaydeder (tek hücre sınırına takılmadan)."""
+    if not API_URL:
+        return "API_URL tanımlı değil; veriler yalnızca bu oturumda durur."
+    sahip = kullanici or "ortak"
+    try:
+        for r in analiz:
+            requests.post(API_URL, json={"Tarih": tarih, "Kosu_No": f"BULTEN_R{r['race_no']}",
+                                         "Gelen_At": sahip, "Detay": json.dumps(r)}, timeout=15)
+        return None
+    except requests.RequestException as e:
+        return f"Buluta kaydedilemedi (analiz yerelde duruyor): {e}"
+
+
 if st.session_state["loaded_date"] != date_str:
     st.session_state.update(analyzed=False, quantum_results=[], loaded_date=date_str)
     if API_URL:
         try:
-            yanit = requests.get(API_URL, timeout=10); yanit.raise_for_status()
+            yanit = requests.get(API_URL, timeout=15); yanit.raise_for_status()
+            sahip = kullanici or "ortak"
+            kosu_map, eski_format = {}, None
             for satir in yanit.json():
-                if str(satir.get("Tarih", "")) != date_str:
+                if str(satir.get("Tarih", ""))[:10] != date_str:
                     continue
-                if satir.get("Kosu_No") == "BÜLTEN_DATA":
-                    st.session_state["quantum_results"] = json.loads(satir.get("Detay", "[]"))
-                    st.session_state["analyzed"] = True
-                elif satir.get("Kosu_No") == "AGIRLIKLAR" and SHA_TIN_HAZIR:
+                kno = str(satir.get("Kosu_No", ""))
+                if kno.startswith("BULTEN_R") and str(satir.get("Gelen_At", "")) == sahip:
+                    try:
+                        r = json.loads(satir.get("Detay", "{}"))
+                        kosu_map[r.get("race_no", kno)] = r  # aynı koşu tekrar kaydedildiyse sonuncusu geçerli
+                    except ValueError:
+                        pass
+                elif kno == "BÜLTEN_DATA":  # eski format — geriye uyumluluk
+                    try: eski_format = json.loads(satir.get("Detay", "[]"))
+                    except ValueError: pass
+                elif kno == "AGIRLIKLAR" and SHA_TIN_HAZIR and str(satir.get("Gelen_At", "")) in (sahip, "OGRENME"):
                     try:
                         st.session_state["ogrenme_agirliklari"] = json.loads(satir.get("Detay", "{}")).get(
                             "w", st.session_state["ogrenme_agirliklari"])
                     except (ValueError, AttributeError):
                         pass
+            yuklenen = [kosu_map[k] for k in sorted(kosu_map, key=lambda x: int(x))] if kosu_map else (eski_format or [])
+            if yuklenen:
+                st.session_state.update(quantum_results=yuklenen, analyzed=True)
         except (requests.RequestException, ValueError) as e:
             st.sidebar.warning(f"Bulut arşivine ulaşılamadı: {e}")
 
@@ -236,16 +270,25 @@ def rapor_html(analiz, tarih, agirliklar):
         <div class="tarih">{guzel_tarih}</div></div>
       {kosu_bloklari}
       <div class="alt">Skorlar, resmi racecard verilerinden (rating, form, jokey/antrenör istatistikleri,
-      12 aylık draw tabloları, deneme koşuları, veteriner kayıtları) hesaplanan 38 kriterin ağırlıklı
+      12 aylık draw tabloları, deneme koşuları, veteriner kayıtları) hesaplanan 40 kriterin ağırlıklı
       ortalamasıdır. Aktif ağırlıklar: {agirlik_satiri}. Bu rapor bir kazanç garantisi değildir;
       sorumlu oynayın.</div>
     </body></html>"""
 
 
 # ================================================================ MASA
+ONCELIKLI = ["B9", "B10", "C3", "D7", "C2", "B3", "B2", "A3", "B6"]  # kullanıcı gözlem önceliği
+
+def oncelik_puani(h):
+    kriterler = h.get("kriterler") or {}
+    degerler = [v for a, v in kriterler.items() if a.split()[0] in ONCELIKLI]
+    return sum(degerler) / len(degerler) if degerler else h.get("score", 0)
+
 if menu == "Masa":
     st.markdown("# Masa")
-    st.caption(f"{secili_tarih.strftime('%d.%m.%Y')} yarış günü")
+    st.caption(f"{secili_tarih.strftime('%d.%m.%Y')} · "
+               f"Öncelikli kriterler: {', '.join(ONCELIKLI)} (mesafe/pist rekoru, jokey-antrenör, "
+               f"zemin, form, kilo, kariyer)")
     c1, c2, c3 = st.columns(3)
     c1.metric("Yüklü bülten", f"{len(res)} koşu" if res else "yok")
     c2.metric("Puanlanan at", sum(len(r["horses"]) for r in res) if res else 0)
@@ -257,11 +300,29 @@ if menu == "Masa":
         st.info("Bu tarihe yüklü bülten yok. **Bülten** ekranından racecard PDF'ini yükleyin "
                 "ya da TJK/HKJC'den otomatik çekin.")
     else:
-        st.markdown("### Günün öne çıkanları")
-        onecikan = sorted((r for r in res if r["horses"]),
-                          key=lambda r: r["horses"][0].get("score", 0), reverse=True)[:3]
-        for r in onecikan:
-            kosu_karti(r, ilk_n=3)
+        st.markdown("### Koşu koşu bahis planı")
+        for r in res:
+            atlar = [h for h in r["horses"] if not h.get("yedek")]
+            if len(atlar) < 4:
+                continue
+            t4 = [h["num"] for h in atlar[:4]]
+            onc = sorted(atlar, key=oncelik_puani, reverse=True)[:4]
+            onc_str = " · ".join(f"#{h['num']} {h['name']}" for h in onc[:3])
+            uyum = len({h["num"] for h in onc[:4]} & set(t4))
+            st.markdown(
+                f"<div class='kart'><div class='kosu-baslik'><div class='kosu-no'>{r['race_no']}</div>"
+                f"<div><b>{r.get('name','KOŞU')}</b><div class='kosu-meta'>{r.get('time','')} · "
+                f"{r.get('distance','')}m · {'Kum' if r.get('surface')=='AWT' else 'Çim'} · {r.get('class','')}</div></div></div>"
+                f"<div style='display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center'>"
+                f"<div><div class='kosu-meta'>İKİLİ</div><b>{t4[0]}-{t4[1]}</b></div>"
+                f"<div><div class='kosu-meta'>SIRALI İKİLİ</div><b>{t4[0]}→{t4[1]}</b></div>"
+                f"<div><div class='kosu-meta'>ÜÇLÜ</div><b>{t4[0]}-{t4[1]}-{t4[2]}</b></div>"
+                f"<div><div class='kosu-meta'>SIRALI ÜÇLÜ</div><b>{t4[0]}→{t4[1]}→{t4[2]}</b></div>"
+                f"<div><div class='kosu-meta'>TABELA</div><b>{'-'.join(map(str,t4))}</b></div></div>"
+                f"<div class='atalt' style='margin-top:8px'>🎯 Öncelikli kriter sıralaması: {onc_str} "
+                f"&nbsp;·&nbsp; genel skorla uyum: {uyum}/4"
+                f"{' &nbsp;⚠️ öncelik listesi farklı at gösteriyor' if uyum <= 2 else ''}</div></div>",
+                unsafe_allow_html=True)
 
     if st.session_state["isabet_gecmisi"]:
         st.markdown("### Öğrenme geçmişi (bu oturum)")
@@ -280,7 +341,7 @@ elif menu == "Bülten":
         if not SHA_TIN_HAZIR:
             st.error("sha_tin_motoru.py bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
         pdf = st.file_uploader("HKJC günlük racecard PDF'i (≈58 sayfa)", type=["pdf"])
-        if st.button("Bülteni ayrıştır ve 38 kriterle puanla", type="primary",
+        if st.button("Bülteni ayrıştır ve 40 kriterle puanla", type="primary",
                      disabled=not (SHA_TIN_HAZIR and pdf)):
             with st.spinner("Rating, form, draw istatistikleri, denemeler ve veteriner kayıtları okunuyor…"):
                 try:
@@ -295,13 +356,9 @@ elif menu == "Bülten":
                         else:
                             hedef = veri.get("tarih") or date_str
                             st.session_state.update(quantum_results=analiz, analyzed=True, loaded_date=hedef)
-                            if API_URL:
-                                try:
-                                    requests.post(API_URL, json={"Tarih": hedef, "Kosu_No": "BÜLTEN_DATA",
-                                                                 "Gelen_At": "SYSTEM",
-                                                                 "Detay": json.dumps(analiz)}, timeout=10)
-                                except requests.RequestException as e:
-                                    st.warning(f"Buluta kaydedilemedi (analiz yerelde duruyor): {e}")
+                            hata = buluta_kaydet(analiz, hedef)
+                            if hata:
+                                st.warning(hata)
                             st.success(f"{len(analiz)} koşu, "
                                        f"{sum(len(r['horses']) for r in analiz)} at puanlandı. "
                                        f"Bülten tarihi: {hedef}")
@@ -332,7 +389,7 @@ elif menu == "Bülten":
                         cekilen = form_skoru_hesapla(cekilen)
                         st.session_state.update(quantum_results=cekilen, analyzed=True, loaded_date=date_str)
                         st.success(f"{len(cekilen)} koşu çekildi ve basit form skoruyla puanlandı "
-                                   "(web verisi PDF kadar zengin değildir; 38 kriter yalnızca PDF yolunda).")
+                                   "(web verisi PDF kadar zengin değildir; 40 kriter yalnızca PDF yolunda).")
                         st.rerun()
                 except Exception as e:
                     st.error(f"Veri çekilemedi: {e}")
@@ -346,7 +403,7 @@ elif menu == "Analiz":
         for r in res:
             kosu_karti(r)
             atlar = [h for h in r["horses"] if h.get("kriterler")]
-            if atlar and st.toggle(f"Koşu {r['race_no']} · 38 kriterlik tam matris", key=f"m{r['race_no']}"):
+            if atlar and st.toggle(f"Koşu {r['race_no']} · 40 kriterlik tam matris", key=f"m{r['race_no']}"):
                 st.dataframe(pd.DataFrame({f"#{h['num']} {h['name'][:14]}": h["kriterler"] for h in atlar}),
                              use_container_width=True, height=420)
                 st.caption("A Rating/Sınıf · B Form · C İnsan · D Koşul (12 aylık draw istatistiği) · "
@@ -391,6 +448,25 @@ elif menu == "Detay":
             st.markdown("### Kriter matrisi")
             st.dataframe(pd.DataFrame({f"#{h['num']} {h['name'][:14]}": h["kriterler"] for h in atlar}),
                          use_container_width=True, height=460)
+
+        if any(h.get("profil") for h in atlar):
+            st.markdown("### Mesafe & yüzey profili (eski koşulardan)")
+            st.caption("Her atın kendi geçmiş koşularından çıkarılmıştır: hangi zeminde ve "
+                       "hangi mesafede kaç koşu / kaç galibiyet / kaç tabela.")
+            profil_satirlari = []
+            for h in atlar:
+                p = h.get("profil") or {}
+                cim = (p.get("yuzeyler") or {}).get("Çim", {"n": 0, "w": 0, "t3": 0})
+                kum = (p.get("yuzeyler") or {}).get("Kum", {"n": 0, "w": 0, "t3": 0})
+                bugun = (p.get("mesafeler") or {}).get(r.get("distance"), {"n": 0, "w": 0, "t3": 0})
+                profil_satirlari.append({
+                    "No": h["num"], "At": h["name"],
+                    "Çim (k/g/t3)": f"{cim['n']}/{cim['w']}/{cim['t3']}",
+                    "Kum (k/g/t3)": f"{kum['n']}/{kum['w']}/{kum['t3']}",
+                    f"Bugünkü mesafe {r.get('distance','')}m": f"{bugun['n']}/{bugun['w']}/{bugun['t3']}",
+                    "En başarılı mesafe": f"{p.get('en_iyi_mesafe')}m" if p.get("en_iyi_mesafe") else "—",
+                })
+            st.dataframe(pd.DataFrame(profil_satirlari), use_container_width=True, hide_index=True)
 
 # ================================================================ TAHMİN
 elif menu == "Tahmin":
@@ -469,42 +545,63 @@ elif menu == "Tahmin":
 elif menu == "Sonuç & Öğrenme":
     st.markdown("# Sonuç Girişi ve Öğrenme")
     if not (SHA_TIN_HAZIR and res and any(h.get("kategoriler") for r in res for h in r["horses"])):
-        st.info("Öğrenme için bu tarihte 38 kriterli (PDF yolundan) bir analiz yüklü olmalı.")
+        st.info("Öğrenme için bu tarihte 40 kriterli (PDF yolundan) bir analiz yüklü olmalı.")
     else:
         st.caption("Kazananları seçin; model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
                    "ağırlıkları küçük adımlarla günceller. Anlamlı öğrenme onlarca yarış günü ister; "
                    "hiçbir ağırlık kombinasyonu kazanç garantisi vermez.")
         secimler = {}
-        kolonlar = st.columns(3)
-        for i, r in enumerate(res):
+        for r in res:
             atlar = [h for h in r["horses"] if not h.get("yedek")]
-            with kolonlar[i % 3]:
-                sec = st.selectbox(f"Koşu {r['race_no']} kazananı",
-                                   ["— seçilmedi —"] + [f"#{h['num']} {h['name']}" for h in atlar],
-                                   key=f"kz{r['race_no']}")
-                if sec != "— seçilmedi —":
-                    secimler[r["race_no"]] = int(sec.split()[0].replace("#", ""))
+            ops = ["—"] + [f"#{h['num']} {h['name']}" for h in atlar]
+            st.markdown(f"**Koşu {r['race_no']}** · {r.get('time','')}")
+            k1, k2, k3, k4 = st.columns(4)
+            sira4 = []
+            for kol, etiket in zip([k1, k2, k3, k4], ["1.", "2.", "3.", "4."]):
+                with kol:
+                    s = st.selectbox(etiket, ops, key=f"s{r['race_no']}_{etiket}")
+                    sira4.append(int(s.split()[0].replace("#", "")) if s != "—" else None)
+            if sira4[0]:
+                secimler[r["race_no"]] = [x for x in sira4 if x]
         if st.button("Sonuçlardan öğren ve ağırlıkları güncelle", type="primary"):
             if not secimler:
-                st.warning("En az bir koşunun kazananını seçin.")
+                st.warning("En az bir koşunun kazananını girin (1. zorunlu, 2-3-4 isteğe bağlı).")
             else:
                 yeni_w, rapor = agirliklari_guncelle(st.session_state["ogrenme_agirliklari"], res, secimler)
                 st.session_state["ogrenme_agirliklari"] = yeni_w
                 st.session_state["isabet_gecmisi"].append({"tarih": date_str, "n": rapor["kosu_sayisi"],
                                                            "top1": rapor["top1_isabet"],
                                                            "top3": rapor["top3_isabet"]})
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
                 c1.metric("İşlenen koşu", rapor["kosu_sayisi"])
                 c2.metric("1. tahmin isabeti", f"{rapor['top1_isabet']}/{rapor['kosu_sayisi']}")
                 c3.metric("İlk-3 isabeti", f"{rapor['top3_isabet']}/{rapor['kosu_sayisi']}")
+                c4.metric("Tabela isabeti", f"{rapor['tabela_isabet']}/{rapor['kosu_sayisi']*4}")
                 st.table(pd.DataFrame([{"Kategori": KATEGORI_ADLARI[k],
                                         "Yeni ağırlık": f"%{v*100:.1f}",
                                         "Değişim": f"{rapor['degisim'][k]*100:+.2f}"} for k, v in yeni_w.items()]))
+                if rapor.get("kriter_perf"):
+                    # birikimli kriter performansı (oturum boyunca)
+                    birikim = st.session_state.setdefault("kriter_perf_birikim", {})
+                    for kr, p in rapor["kriter_perf"].items():
+                        eski_p, adet = birikim.get(kr, (0.0, 0))
+                        birikim[kr] = ((eski_p * adet + p) / (adet + 1), adet + 1)
+                    siralama = sorted(birikim.items(), key=lambda x: -x[1][0])
+                    st.markdown("### 🏆 Sonuçlara göre en işe yarayan kriterler")
+                    st.caption("Gerçek ilk-4'ü kendi sıralamasında en üstte tutan kriterler "
+                               "(0-100; birikimli). Bu tablo büyüdükçe hangi kriterlerin gerçekten "
+                               "öngörücü olduğunu birlikte göreceğiz.")
+                    st.table(pd.DataFrame([{"Kriter": kr, "Performans": f"{p:.1f}", "Ölçülen koşu": n}
+                                           for kr, (p, n) in siralama[:12]]))
+                    dusukler = ", ".join(kr for kr, (p, n) in siralama[-5:])
+                    st.caption(f"En zayıf görünenler: {dusukler}")
                 if API_URL:
                     try:
                         requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "AGIRLIKLAR",
-                                                     "Gelen_At": "OGRENME",
-                                                     "Detay": json.dumps({"w": yeni_w})}, timeout=10)
-                        st.success("Öğrenilen ağırlıklar bulut arşivine kaydedildi.")
+                                                     "Gelen_At": kullanici or "OGRENME",
+                                                     "Detay": json.dumps({"w": yeni_w,
+                                                                          "kriter_perf": rapor.get("kriter_perf", {})})},
+                                      timeout=10)
+                        st.success("Öğrenilen ağırlıklar ve kriter performansı bulut arşivine kaydedildi.")
                     except requests.RequestException as e:
-                        st.warning(f"Buluta yazılamadı (ağırlıklar bu oturumda geçerli): {e}")
+                        st.warning(f"Buluta yazılamadı (bu oturumda geçerli): {e}")
