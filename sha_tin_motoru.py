@@ -34,6 +34,42 @@ KATEGORI_ADLARI = {
     "kosul": "Koşul Uyumu", "risk": "Hazırlık & Risk",
 }
 
+# KRİTER AĞIRLIKLARI — 04.07.2026 Sha Tin gününün (7 koşu) ölçülmüş kriter
+# performansından türetildi: agirlik = 1 + (performans - 55) x 0.08, [0.4-2.2].
+# İyi bilen kriterler (Tutarlılık, Kariyer İlk-3, form ailesi) 1.6-2.2x etkili;
+# zayıflar (resmi rating, draw istatistikleri, deneme galibi) 0.5x'e düşürüldü.
+# Her sonuç girişinde kriter_agirliklari_turet() ile gerçek performansa göre
+# kendini günceller — tek güne aşırı uyum riskine karşı harmanlanarak (%70 eski).
+KRITER_AGIRLIKLARI = {
+    "A1 Resmi Rating": 0.58, "A2 Sınıf Bandı Konumu": 0.58, "A3 Kilo Avantajı": 1.24,
+    "A4 Rating/Kilo Dengesi": 1.38, "A5 Ortalama Üstü Rating": 1.03,
+    "B1 Son Koşu": 1.4, "B2 Son 3 Koşu Ort.": 1.82, "B3 Son 6 Ağırlıklı": 1.94,
+    "B4 Form Trendi": 0.77, "B5 Kariyer Kazanma %": 1.7, "B6 Kariyer İlk-3 %": 2.2,
+    "B7 Tutarlılık": 2.2, "B8 Deneyim": 1.47, "B9 Mesafe Rekoru": 1.62,
+    "B10 Pist+Mesafe Rekoru": 1.74, "B11 Sınıf Rekoru": 1.09, "B12 Sezon Formu": 1.89,
+    "B13 Dinlenme Uyumu": 0.94, "B14 Yüzey Uyumu (Kum)": 1.94, "B14 Yüzey Uyumu (Çim)": 1.76,
+    "C1 Jokey Kazanma %": 0.83, "C2 Antrenör Kazanma %": 0.75, "C3 Jokey×Antrenör": 1.01,
+    "C4 Elit Jokey": 1.1, "C5 Elit Antrenör": 1.07, "C6 Jokey Atanmış": 1.38,
+    "C7 Jokey-Antrenör Ortak Geçmişi": 1.22, "C8 At-Jokey Ortak Sicili": 0.95,
+    "D1 Draw Kazanma % (12ay)": 0.5, "D2 Draw Tabela % (12ay)": 0.75,
+    "D3 Draw İlk-4 % (12ay)": 0.78, "D4 İç Kulvar": 1.26,
+    "D5 Geniş Alan Dış Draw Baskısı": 1.48, "D6 Kilo×Mesafe": 1.46,
+    "D7 İyi Zemin (G) Uyumu": 1.74,
+    "E1 Deneme Derecesi": 1.11, "E2 Deneme Galibi": 0.46, "E3 Veteriner Kaydı": 1.46,
+    "E4 Ekipman Değişikliği": 0.57, "E5 Az Koşu Belirsizliği": 1.26, "E6 Sağlık Geçmişi": 1.38,
+}
+
+
+def kriter_agirliklari_turet(kriter_perf: dict, mevcut: dict | None = None,
+                             harman: float = 0.30) -> dict:
+    """Ölçülen kriter performansından yeni ağırlıklar üretir (%70 eski, %30 yeni)."""
+    eski = {**KRITER_AGIRLIKLARI, **(mevcut or {})}
+    yeni = dict(eski)
+    for kr, p in (kriter_perf or {}).items():
+        hedef = max(0.4, min(2.2, 1 + (p - 55) * 0.08))
+        yeni[kr] = round((1 - harman) * eski.get(kr, 1.0) + harman * hedef, 3)
+    return yeni
+
 # ---------------------------------------------------------------------------
 # 1) PDF AYRIŞTIRMA
 # ---------------------------------------------------------------------------
@@ -355,9 +391,11 @@ def _form_puani(karakter):
     return harita.get(karakter, 0)  # W/P/D/U vb. = 0
 
 
-def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
-    """Ayrıştırılmış PDF verisini 40 kriterle puanlar."""
-    w = dict(agirliklar or VARSAYILAN_AGIRLIKLAR)
+def analiz_et(veri: dict, agirliklar: dict | None = None,
+              kriter_agirliklari: dict | None = None) -> list[dict]:
+    """Ayrıştırılmış PDF verisini 40 kriterle puanlar (kriterler ağırlıklı)."""
+    w = {**VARSAYILAN_AGIRLIKLAR, **(agirliklar or {})}
+    kw = {**KRITER_AGIRLIKLARI, **(kriter_agirliklari or {})}
     sonuc = []
     for kosu in veri["kosular"]:
         atlar = [h for h in kosu["horses"] if not h["yedek"]]
@@ -473,10 +511,15 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
             k["E5 Az Koşu Belirsizliği"] = 100 if st >= 5 else st * 20
             k["E6 Sağlık Geçmişi"] = 25 if dt.get("saglik") else 100  # resmi kanama/kalp/roarer kaydı
 
-            # ---- Kategori ve toplam (kriter sayısına göre dinamik ortalama) ----
+            # ---- Kategori ve toplam (kriter ağırlıklı ortalama) ----
             def _kat_ort(harf):
-                degerler = [v for a, v in k.items() if a.startswith(harf)]
-                return sum(degerler) / len(degerler)
+                pay = payda = 0.0
+                for a, v in k.items():
+                    if a.startswith(harf):
+                        katsayi = kw.get(a, 1.0)
+                        pay += katsayi * v
+                        payda += katsayi
+                return pay / payda if payda else NOTR
             kat = {"rating": _kat_ort("A"), "form": _kat_ort("B"), "insan": _kat_ort("C"),
                    "kosul": _kat_ort("D"), "risk": _kat_ort("E")}
             h["kriterler"] = {a: round(v, 1) for a, v in k.items()}
