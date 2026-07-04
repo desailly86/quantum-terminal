@@ -527,19 +527,24 @@ elif menu == "Tahmin":
 
         st.write("---")
         st.markdown("## Rapor")
-        if not PDF_HAZIR:
-            st.warning("PDF üretimi için WeasyPrint gerekli (requirements.txt içinde mevcut; "
-                       "Streamlit Cloud'da otomatik kurulur).")
-        else:
+        if PDF_HAZIR:
             if st.button("📄 Günün tahmin raporunu (PDF) oluştur", type="primary"):
                 with st.spinner("Rapor hazırlanıyor…"):
                     try:
                         pdf_bytes = HTML(string=rapor_html(res, date_str,
                                                            st.session_state["ogrenme_agirliklari"])).write_pdf()
-                        st.download_button("Raporu indir", data=pdf_bytes,
+                        st.download_button("Raporu indir (PDF)", data=pdf_bytes,
                                            file_name=f"avelor_{date_str}.pdf", mime="application/pdf")
                     except Exception as e:
-                        st.error(f"Rapor üretilemedi: {e}")
+                        st.error(f"PDF üretilemedi: {e}")
+        else:
+            st.caption("PDF motoru (WeasyPrint) bu sunucuda henüz kurulu değil — depoya 'packages.txt' "
+                       "eklenince otomatik kurulur. O zamana kadar raporu HTML olarak indirebilirsiniz: "
+                       "dosyayı tarayıcıda açıp Ctrl+P → 'PDF olarak kaydet' demeniz yeterli.")
+        # HTML raporu her koşulda mevcut (PDF ile birebir aynı tasarım)
+        st.download_button("🖨️ Raporu indir (HTML — tarayıcıdan PDF'e yazdırılabilir)",
+                           data=rapor_html(res, date_str, st.session_state["ogrenme_agirliklari"]),
+                           file_name=f"avelor_{date_str}.html", mime="text/html")
 
 # ================================================================ SONUÇ & ÖĞRENME
 elif menu == "Sonuç & Öğrenme":
