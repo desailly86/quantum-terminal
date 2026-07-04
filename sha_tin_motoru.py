@@ -3,11 +3,11 @@
 sha_tin_motoru.py — HKJC Sha Tin Racecard PDF Analiz Motoru
 ============================================================
 58 sayfalık resmi HKJC racecard PDF'ini ayrıştırır ve HER KRİTERİ
-PDF'TE GERÇEKTEN VAR OLAN VERİDEN hesaplayan 38 kriterli bir analiz
+PDF'TE GERÇEKTEN VAR OLAN VERİDEN hesaplayan 40 kriterli bir analiz
 matrisi üretir. Uydurma veri yoktur; bir alan PDF'te yoksa kriter
 "nötr (50)" kabul edilir ve bu şeffafça işaretlenir.
 
-5 kategori / 38 kriter:
+5 kategori / 40 kriter:
   A. RATING & SINIF (5)  — resmi rating, sınıf bandı konumu, kilo...
   B. FORM (8)            — son koşular, kariyer yüzdeleri, trend...
   C. İNSAN FAKTÖRÜ (6)   — jokey/antrenör sezon kazanma yüzdeleri...
@@ -91,8 +91,8 @@ def _detay_ayristir(sayfalar, bulten_tarihi):
         adlar = list(isim_kalip.finditer(sayfa))
         for i, m in enumerate(adlar):
             blok = sayfa[m.start(): adlar[i+1].start() if i+1 < len(adlar) else len(sayfa)]
-            # blok bir sonraki atın form satırlarını da içerebilir; istatistikler
-            # her zaman ismin hemen altındaki 6 satırda olduğundan sorun olmaz.
+            # Form satırları (eski koşular) isimden ÖNCE gelir:
+            form_blok = sayfa[adlar[i-1].start() if i > 0 else 0: m.start()]
             kayit = {
                 "dist": _rec_oku(blok, "Dist"),
                 "trk_dist": _rec_oku(blok, "Trk/Dist"),
@@ -101,8 +101,13 @@ def _detay_ayristir(sayfalar, bulten_tarihi):
                 "ilk_cikis": _rec_oku(blok, "1st Up"),
                 "tra_joc": _rec_oku(blok, "Tra/Joc"),
                 "zemin_g": _rec_oku(blok, "G"),
+                "awt": _rec_oku(blok, "AWT"),
+                "st": _rec_oku(blok, "ST"),
+                "hv": _rec_oku(blok, "HV"),
+                "at_jokey": _rec_oku(blok, "Jockey"),  # BU jokeyin BU attaki ortak sicili
                 "saglik": bool(re.search(r"(Bleeding|Heart irregularity|Roarer) record", blok)),
                 "gun_farki": None,
+                "gecmis": _gecmis_kosulari_oku(form_blok),
             }
             if bugun:
                 gunler = []
@@ -130,6 +135,53 @@ def _rec_puan(rec, kazanma_carpan=4.0, tabela_carpan=2.0):
     ham = 0.55 * kazanma + 0.45 * tabela
     guven = n / (n + 3.0)  # 1 start → %25 etki, 10 start → %77 etki
     return NOTR + (ham - NOTR) * guven
+
+
+def _rec_topla(*kayitlar):
+    """Birden fazla rekoru (ör. ST + HV = çim) tek rekorda birleştirir."""
+    dolu = [r for r in kayitlar if r]
+    if not dolu:
+        return None
+    return {"n": sum(r["n"] for r in dolu), "w": sum(r["w"] for r in dolu),
+            "p2": sum(r["p2"] for r in dolu), "p3": sum(r["p3"] for r in dolu)}
+
+
+_GECMIS_SATIR = re.compile(
+    r"(\d{1,2})/(\d{1,2})\s+\*?\d+\s+\d{1,2}/\d{1,2}/\d{2}.*?"
+    r"(ST|HV|AWT)\s+[A-C+3—\-\s]*?(\d{3,4})\s+"
+    r"(GF|GY|GD|SE|WS|WF|SL|G|Y|S|H)\b")
+
+def _gecmis_kosulari_oku(form_blok):
+    """Eski koşu satırlarından [(derece, saha, pist, mesafe, zemin)] listesi."""
+    gecmis = []
+    for m in _GECMIS_SATIR.finditer(form_blok):
+        try:
+            gecmis.append({"pos": int(m.group(1)), "alan": int(m.group(2)),
+                           "pist": m.group(3), "mesafe": int(m.group(4)),
+                           "zemin": m.group(5)})
+        except ValueError:
+            pass
+    return gecmis
+
+
+def profil_ozeti(gecmis, bugun_mesafe=None, bugun_yuzey=None):
+    """Bir atın geçmişinden mesafe/yüzey başarı özeti (arayüz için)."""
+    def _grup(anahtar_fn):
+        grup = {}
+        for g in gecmis:
+            k = anahtar_fn(g)
+            s = grup.setdefault(k, {"n": 0, "w": 0, "t3": 0})
+            s["n"] += 1
+            s["w"] += 1 if g["pos"] == 1 else 0
+            s["t3"] += 1 if g["pos"] <= 3 else 0
+        return grup
+    mesafeler = _grup(lambda g: g["mesafe"])
+    yuzeyler = _grup(lambda g: "Kum" if g["pist"] == "AWT" else "Çim")
+    en_iyi_mesafe = None
+    adaylar = [(k, v) for k, v in mesafeler.items() if v["n"] >= 2]
+    if adaylar:
+        en_iyi_mesafe = max(adaylar, key=lambda x: (x[1]["w"] / x[1]["n"], x[1]["t3"] / x[1]["n"]))[0]
+    return {"mesafeler": mesafeler, "yuzeyler": yuzeyler, "en_iyi_mesafe": en_iyi_mesafe}
 
 
 def _tarih_bul(metin):
@@ -288,7 +340,7 @@ def _ekipman_ayristir(sayfalar):
 
 
 # ---------------------------------------------------------------------------
-# 2) 38 KRİTERLİ PUANLAMA
+# 2) 40 KRİTERLİ PUANLAMA
 # ---------------------------------------------------------------------------
 def _n(deger, dizi):
     """Koşu içi min-max normalizasyon (0-100). Tek değer/veri yoksa nötr."""
@@ -304,7 +356,7 @@ def _form_puani(karakter):
 
 
 def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
-    """Ayrıştırılmış PDF verisini 38 kriterle puanlar."""
+    """Ayrıştırılmış PDF verisini 40 kriterle puanlar."""
     w = dict(agirliklar or VARSAYILAN_AGIRLIKLAR)
     sonuc = []
     for kosu in veri["kosular"]:
@@ -373,6 +425,11 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
                 k["B13 Dinlenme Uyumu"] = 55
             else:
                 k["B13 Dinlenme Uyumu"] = 65
+            # Bugünkü yüzey: kum (AWT) günü → AWT sicili; çim günü → ST+HV sicili
+            if kosu["surface"] == "AWT":
+                k["B14 Yüzey Uyumu (Kum)"] = _rec_puan(dt.get("awt"))
+            else:
+                k["B14 Yüzey Uyumu (Çim)"] = _rec_puan(_rec_topla(dt.get("st"), dt.get("hv")))
 
             # ---- C. İNSAN FAKTÖRÜ ----
             jp = h["jockey_pct"]
@@ -383,6 +440,7 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
             k["C5 Elit Antrenör"] = 100 if h["trainer_pct"] >= 10 else (60 if h["trainer_pct"] >= 7.5 else 25)
             k["C6 Jokey Atanmış"] = 100 if h["jockey"] else 0
             k["C7 Jokey-Antrenör Ortak Geçmişi"] = _rec_puan(dt.get("tra_joc"), 6.0, 3.0)
+            k["C8 At-Jokey Ortak Sicili"] = _rec_puan(dt.get("at_jokey"), 5.0, 2.5)
 
             # ---- D. KOŞUL UYUMU (PDF'in kendi 12 aylık draw tablosu) ----
             d = draw_tbl.get(h["draw"]) if h["draw"] else None
@@ -423,6 +481,7 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
                    "kosul": _kat_ort("D"), "risk": _kat_ort("E")}
             h["kriterler"] = {a: round(v, 1) for a, v in k.items()}
             h["kategoriler"] = {a: round(v, 1) for a, v in kat.items()}
+            h["profil"] = profil_ozeti(dt.get("gecmis", []), kosu["distance"], kosu["surface"])
             h["score"] = round(sum(w[a] * kat[a] for a in w), 1)
             # Mevcut arayüz alanları (dürüst etiketlerle eşleşir):
             h["bio"] = h["kategoriler"]["form"]        # arayüzde: "Form"
@@ -454,43 +513,69 @@ def analiz_et(veri: dict, agirliklar: dict | None = None) -> list[dict]:
 def agirliklari_guncelle(agirliklar: dict, analiz: list[dict],
                          sonuclar: dict, hiz: float = 0.06) -> tuple[dict, dict]:
     """
-    sonuclar: {race_no: kazanan_at_no}
-    Mantık: kazananı toplam skordan DAHA İYİ sıralayan kategorilerin ağırlığı
-    küçük bir adımla artar, daha kötü sıralayanlarınki azalır. Ağırlıklar
-    0.05-0.50 aralığında tutulur ve toplamı 1'e normalize edilir.
-    Dönüş: (yeni_agirliklar, rapor)
+    sonuclar: {race_no: kazanan_no}  VEYA  {race_no: [1., 2., 3., 4. at no]}
+    Kategori ağırlıkları: ilk-4'ü toplam skordan daha iyi sıralayan kategoriler
+    güçlenir (ağırlıklı: 1.lik×4, 2.lik×3, 3.lük×2, 4.lük×1).
+    Ayrıca 40 kriterin her birinin ilk-4'ü ne kadar iyi bildiği ölçülür →
+    rapor["kriter_perf"] (0-100; yüksek = o kriter gerçek sonucu iyi biliyor).
     """
-    w = dict(agirliklar or VARSAYILAN_AGIRLIKLAR)
-    rapor = {"kosu_sayisi": 0, "top1_isabet": 0, "top3_isabet": 0, "detay": [], "degisim": {}}
+    w = {**VARSAYILAN_AGIRLIKLAR, **(agirliklar or {})}
+    rapor = {"kosu_sayisi": 0, "top1_isabet": 0, "top3_isabet": 0, "tabela_isabet": 0,
+             "detay": [], "degisim": {}, "kriter_perf": {}}
     eski = dict(w)
+    kriter_toplam, kriter_sayac = {}, {}
+    KATSAYI = [4, 3, 2, 1]
 
     for kosu in analiz:
         rn = kosu["race_no"]
         if rn not in sonuclar:
             continue
-        kazanan_no = sonuclar[rn]
+        girilen = sonuclar[rn]
+        ilk4_no = [int(x) for x in (girilen if isinstance(girilen, (list, tuple)) else [girilen]) if x]
         atlar = [h for h in kosu["horses"] if not h.get("yedek")]
-        if not atlar:
-            continue
-        try:
-            kazanan = next(h for h in atlar if h["num"] == int(kazanan_no))
-        except (StopIteration, ValueError):
+        no_map = {h["num"]: h for h in atlar}
+        ilk4 = [no_map[n] for n in ilk4_no if n in no_map]
+        if not ilk4:
             continue
         rapor["kosu_sayisi"] += 1
         n = len(atlar)
+        toplam_sirali = sorted(atlar, key=lambda x: x["score"], reverse=True)
 
-        toplam_sira = sorted(atlar, key=lambda x: x["score"], reverse=True).index(kazanan) + 1
-        if toplam_sira == 1: rapor["top1_isabet"] += 1
-        if toplam_sira <= 3: rapor["top3_isabet"] += 1
+        kazanan_sira = toplam_sirali.index(ilk4[0]) + 1
+        if kazanan_sira == 1: rapor["top1_isabet"] += 1
+        if kazanan_sira <= 3: rapor["top3_isabet"] += 1
+        tahmin_ilk4 = {h["num"] for h in toplam_sirali[:4]}
+        rapor["tabela_isabet"] += len(tahmin_ilk4 & {h["num"] for h in ilk4})
 
+        # Kategori ağırlık güncellemesi (ilk-4 ağırlıklı)
         for kat in w:
-            kat_sira = sorted(atlar, key=lambda x: x["kategoriler"].get(kat, 0),
-                              reverse=True).index(kazanan) + 1
-            fark = (toplam_sira - kat_sira) / max(n - 1, 1)  # + ise kategori daha iyi bildi
-            w[kat] *= (1 + hiz * fark)
-        rapor["detay"].append({"kosu": rn, "kazanan": kazanan["name"],
-                               "tahmin_sirasi": toplam_sira, "at_sayisi": n})
+            fark_toplam, agirlik_toplam = 0.0, 0.0
+            kat_sirali = sorted(atlar, key=lambda x: x["kategoriler"].get(kat, 0), reverse=True)
+            for sira, at in enumerate(ilk4):
+                katsayi = KATSAYI[sira] if sira < 4 else 1
+                fark = (toplam_sirali.index(at) - kat_sirali.index(at)) / max(n - 1, 1)
+                fark_toplam += katsayi * fark
+                agirlik_toplam += katsayi
+            w[kat] *= (1 + hiz * fark_toplam / max(agirlik_toplam, 1))
 
+        # Kriter performansı: her kriter ilk-4'ü ne kadar üstte tutuyor?
+        for kriter in (atlar[0].get("kriterler") or {}):
+            payda, pay = 0.0, 0.0
+            kr_sirali = sorted(atlar, key=lambda x: x["kriterler"].get(kriter, 0), reverse=True)
+            for sira, at in enumerate(ilk4):
+                katsayi = KATSAYI[sira] if sira < 4 else 1
+                yuzdelik = 1 - kr_sirali.index(at) / max(n - 1, 1)  # 1=en üstte bildi
+                pay += katsayi * yuzdelik
+                payda += katsayi
+            kriter_toplam[kriter] = kriter_toplam.get(kriter, 0.0) + pay / max(payda, 1)
+            kriter_sayac[kriter] = kriter_sayac.get(kriter, 0) + 1
+
+        rapor["detay"].append({"kosu": rn, "kazanan": ilk4[0]["name"],
+                               "tahmin_sirasi": kazanan_sira, "at_sayisi": n,
+                               "tabela": f"{len(tahmin_ilk4 & {h['num'] for h in ilk4})}/4"})
+
+    rapor["kriter_perf"] = {kr: round(kriter_toplam[kr] / kriter_sayac[kr] * 100, 1)
+                            for kr in kriter_toplam}
     # sınırla ve normalize et
     for kat in w:
         w[kat] = max(0.05, min(0.50, w[kat]))
