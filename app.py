@@ -22,10 +22,17 @@ except ImportError:
     SHA_TIN_HAZIR = False
 
 try:
-    from veri_kaynagi import tjk_program_cek, hkjc_racecard_cek, form_skoru_hesapla
+    from veri_kaynagi import (tjk_program_cek, tjk_gunun_hipodromlari, evrensel_kriterle,
+                              hkjc_sonuc_cek, hava_durumu)
     VERI_KAYNAGI_HAZIR = True
 except ImportError:
     VERI_KAYNAGI_HAZIR = False
+
+try:
+    import ml_model as ml
+    ML_HAZIR = ml.SKLEARN_VAR
+except ImportError:
+    ML_HAZIR = False
 
 try:
     from weasyprint import HTML
@@ -108,6 +115,8 @@ _init("loaded_date", "")
 _init("ogrenme_agirliklari", dict(VARSAYILAN_AGIRLIKLAR) if SHA_TIN_HAZIR else None)
 _init("kriter_agirliklari", dict(KRITER_AGIRLIKLARI) if SHA_TIN_HAZIR else None)
 _init("isabet_gecmisi", [])
+_init("ml_modeli", None)
+_init("egitim_gunleri", {})  # {tarih: sonuçlar} — eğitim setinin çekirdeği
 
 # ---------------------------------------------------------------- YAN MENÜ
 with st.sidebar:
@@ -124,7 +133,8 @@ with st.sidebar:
     date_str = secili_tarih.isoformat()
     st.write("---")
     for ad, ikon in [("Masa", "📊"), ("Bülten", "📥"), ("Analiz", "🔬"),
-                     ("Detay", "📝"), ("Tahmin", "🎟️"), ("Sonuç & Öğrenme", "🧠")]:
+                     ("Detay", "📝"), ("Tahmin", "🎟️"), ("Sonuç & Öğrenme", "🧠"),
+                     ("Model", "🤖"), ("Karne", "📈")]:
         if st.button(f"{ikon} {ad}", use_container_width=True,
                      type="primary" if st.session_state["menu"] == ad else "secondary"):
             st.session_state["menu"] = ad
@@ -171,6 +181,11 @@ if st.session_state["loaded_date"] != date_str:
                 elif kno == "BÜLTEN_DATA":  # eski format — geriye uyumluluk
                     try: eski_format = json.loads(satir.get("Detay", "[]"))
                     except ValueError: pass
+                elif kno == "MODEL" and ML_HAZIR:
+                    try:
+                        st.session_state["ml_modeli"] = ml.model_yukle(satir.get("Detay", ""))
+                    except Exception:
+                        pass
                 elif kno == "AGIRLIKLAR" and SHA_TIN_HAZIR and str(satir.get("Gelen_At", "")) in (sahip, "OGRENME"):
                     try:
                         _d = json.loads(satir.get("Detay", "{}"))
@@ -374,30 +389,39 @@ elif menu == "Bülten":
     with sek2:
         if not VERI_KAYNAGI_HAZIR:
             st.error("veri_kaynagi.py bulunamadı. GitHub'da app.py ile aynı klasöre yükleyin.")
-        kaynak = st.radio("Kaynak", ["HKJC Sha Tin", "HKJC Happy Valley", "TJK (Türkiye)"], horizontal=True)
-        sehir = None
-        if kaynak.startswith("TJK"):
-            sehir = st.selectbox("Hipodrom", ["İstanbul", "Bursa", "İzmir", "Ankara", "Adana",
-                                              "Şanlıurfa", "Elazığ", "Diyarbakır", "Antalya", "Kocaeli"])
-            st.caption("Kaynak: tjk.org → Günlük Yarış Programı")
-        if st.button("Seçili tarihin programını çek", type="primary", disabled=not VERI_KAYNAGI_HAZIR):
-            with st.spinner("Program indiriliyor…"):
+        else:
+            st.caption("tjk.org'da bu tarihte oynanabilen TÜM programlar (yurtiçi + yabancı) "
+                       "listelenir. Yabancı programlarda TJK sığ veri yayınladığından kriter "
+                       "sayısı düşer — kart üzerinde görünür.")
+            if st.button("🌍 Günün tüm hipodromlarını listele", type="primary"):
                 try:
-                    if kaynak.startswith("TJK"):
-                        cekilen = tjk_program_cek(date_str, sehir)
-                    else:
-                        cekilen = hkjc_racecard_cek(date_str, "ST" if "Sha Tin" in kaynak else "HV")
-                    if not cekilen:
-                        st.error("Bu tarihte seçili pistte koşu bulunamadı ya da site yapısı değişmiş. "
-                                 "Sha Tin için PDF yolu daha güvenilirdir.")
-                    else:
-                        cekilen = form_skoru_hesapla(cekilen)
-                        st.session_state.update(quantum_results=cekilen, analyzed=True, loaded_date=date_str)
-                        st.success(f"{len(cekilen)} koşu çekildi ve basit form skoruyla puanlandı "
-                                   "(web verisi PDF kadar zengin değildir; 40 kriter yalnızca PDF yolunda).")
-                        st.rerun()
+                    st.session_state["hipodromlar"] = tjk_gunun_hipodromlari(date_str)
                 except Exception as e:
-                    st.error(f"Veri çekilemedi: {e}")
+                    st.error(f"Hipodrom listesi çekilemedi: {e}")
+            for hip in st.session_state.get("hipodromlar", []):
+                etiket = f"{'🌍' if hip['yabanci'] else '🇹🇷'} {hip['ad']}"
+                if st.button(f"{etiket} — programı çek ve puanla", key=f"hip{hip['sehir_id']}",
+                             use_container_width=True):
+                    with st.spinner(f"{hip['ad']} programı indiriliyor…"):
+                        try:
+                            cekilen = tjk_program_cek(date_str, hip["sehir_id"], hip["ad"])
+                            if not cekilen:
+                                st.error("Program bulunamadı ya da sayfa yapısı değişmiş.")
+                            else:
+                                cekilen = evrensel_kriterle(cekilen)
+                                st.session_state.update(quantum_results=cekilen, analyzed=True,
+                                                        loaded_date=date_str)
+                                ks = cekilen[0].get("kriter_sayisi", "?")
+                                hava = hava_durumu(hip["ad"], date_str)
+                                hava_not = (f" · Hava: {hava['sicaklik']}°C, yağış {hava['yagis_mm']}mm "
+                                            f"→ zemin tahmini {hava['zemin_tahmini']}") if hava else ""
+                                st.success(f"{len(cekilen)} koşu puanlandı (koşu başına ~{ks} kriter — "
+                                           f"kaynağın verdiği kadar){hava_not}")
+                                hata = buluta_kaydet(cekilen, date_str)
+                                if hata: st.warning(hata)
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Veri çekilemedi: {e}")
 
 # ================================================================ ANALİZ
 elif menu == "Analiz":
@@ -510,6 +534,54 @@ elif menu == "Tahmin":
                                 f"⚡ Sürpriz: <b>#{h['num']} {h['name']}</b> — {kat} kategorisinde alanın en iyisi</div>",
                                 unsafe_allow_html=True)
 
+        model = st.session_state.get("ml_modeli")
+        if ML_HAZIR and model is not None:
+            try:
+                res = ml.olasilik_ekle(model, res)
+                st.markdown("## 💠 Model olasılıkları ve Value")
+                st.caption("Olasılık: modelin koşu içi normalize kazanma tahmini. Oran girerseniz "
+                           "value hesaplanır: olasılık × oran − 1 > %5 ise 'oynanabilir' işaretlenir. "
+                           "Model az veriyle eğitildiyse bu sayılara güvenmeyin (Model ekranındaki uyarıya bakın).")
+                for r in res:
+                    atlar = [h for h in r["horses"] if not h.get("yedek") and h.get("olasilik") is not None][:5]
+                    if not atlar:
+                        continue
+                    with st.expander(f"Koşu {r['race_no']} — olasılık & value"):
+                        for h in atlar:
+                            c1, c2, c3 = st.columns([2.4, 1, 1.4])
+                            c1.write(f"**#{h['num']} {h['name']}** — model %{h['olasilik']}")
+                            oran = c2.number_input("Oran", min_value=1.01, value=5.0, step=0.1,
+                                                   key=f"oran{r['race_no']}_{h['num']}", label_visibility="collapsed")
+                            v = ml.value_hesapla(h["olasilik"], oran)
+                            c3.write(("✅ **VALUE +%.0f%%**" % v["value"]) if v["oynanabilir"]
+                                     else f"— value %{v['value']}")
+            except Exception as e:
+                st.warning(f"Olasılık hesaplanamadı (model/kriter uyumsuzluğu): {e}")
+
+        st.write("---")
+        st.markdown("## 💰 Bütçeli kupon önerisi")
+        butce = st.number_input("Toplam bütçe", min_value=0.0, value=100.0, step=10.0)
+        if butce > 0 and res:
+            plan = []
+            for r in res:
+                atlar = [h for h in r["horses"] if not h.get("yedek")]
+                if len(atlar) < 4:
+                    continue
+                lider = atlar[0]["score"]
+                genis = len([h for h in atlar if lider - h["score"] <= 8])
+                karakter = "BANKO" if genis <= 2 else ("NORMAL" if genis <= 4 else "AÇIK")
+                plan.append({"Koşu": r["race_no"], "Karakter": karakter,
+                             "Yazılacak at": min(genis, 8),
+                             "Atlar": ", ".join(str(h["num"]) for h in atlar[:min(genis, 8)])})
+            if plan:
+                pdf_plan = pd.DataFrame(plan)
+                birimler = pdf_plan["Yazılacak at"].sum()
+                pdf_plan["Önerilen pay"] = (pdf_plan["Yazılacak at"] / birimler * butce).round(1)
+                st.dataframe(pdf_plan, hide_index=True, use_container_width=True)
+                st.caption("Mantık: banko koşuya az at–yüklü pay yerine, bütçe koşunun açıklığıyla "
+                           "orantılı dağıtılır; açık koşuda geniş yazım sürpriz yakalar. Bu bir "
+                           "öneridir, kazanç garantisi değildir.")
+
         st.write("---")
         st.markdown("## Kupon planlayıcı")
         dahil = st.multiselect("Kupona girecek koşular",
@@ -560,16 +632,34 @@ elif menu == "Sonuç & Öğrenme":
         st.caption("Kazananları seçin; model, kazananı hangi kategorinin daha iyi bildiğine bakarak "
                    "ağırlıkları küçük adımlarla günceller. Anlamlı öğrenme onlarca yarış günü ister; "
                    "hiçbir ağırlık kombinasyonu kazanç garantisi vermez.")
+        if VERI_KAYNAGI_HAZIR and st.button("🌐 HKJC'den sonuçları otomatik çek (Sha Tin)"):
+            try:
+                oto = hkjc_sonuc_cek(date_str, "ST")
+                if oto:
+                    st.session_state["oto_sonuclar"] = oto
+                    st.success(f"{len(oto)} koşunun ilk-4'ü çekildi; aşağıdaki kutular dolduruldu, "
+                               "kontrol edip ÖĞREN'e basın.")
+                else:
+                    st.warning("Sonuç bulunamadı (yarışlar bitmemiş olabilir ya da sayfa yapısı değişti).")
+            except Exception as e:
+                st.error(f"Sonuç çekilemedi: {e}")
+        oto = st.session_state.get("oto_sonuclar", {})
         secimler = {}
         for r in res:
             atlar = [h for h in r["horses"] if not h.get("yedek")]
             ops = ["—"] + [f"#{h['num']} {h['name']}" for h in atlar]
+            oto4 = oto.get(r["race_no"], [])
             st.markdown(f"**Koşu {r['race_no']}** · {r.get('time','')}")
             k1, k2, k3, k4 = st.columns(4)
             sira4 = []
-            for kol, etiket in zip([k1, k2, k3, k4], ["1.", "2.", "3.", "4."]):
+            for j, (kol, etiket) in enumerate(zip([k1, k2, k3, k4], ["1.", "2.", "3.", "4."])):
                 with kol:
-                    s = st.selectbox(etiket, ops, key=f"s{r['race_no']}_{etiket}")
+                    varsayilan = 0
+                    if j < len(oto4):
+                        for oi, o in enumerate(ops):
+                            if o.startswith(f"#{oto4[j]} "):
+                                varsayilan = oi; break
+                    s = st.selectbox(etiket, ops, index=varsayilan, key=f"s{r['race_no']}_{etiket}")
                     sira4.append(int(s.split()[0].replace("#", "")) if s != "—" else None)
             if sira4[0]:
                 secimler[r["race_no"]] = [x for x in sira4 if x]
@@ -578,10 +668,27 @@ elif menu == "Sonuç & Öğrenme":
                 st.warning("En az bir koşunun kazananını girin (1. zorunlu, 2-3-4 isteğe bağlı).")
             else:
                 yeni_w, rapor = agirliklari_guncelle(st.session_state["ogrenme_agirliklari"], res, secimler)
+                st.session_state["egitim_gunleri"][date_str] = secimler
+                if API_URL and ML_HAZIR:
+                    try:
+                        df_gun = ml.egitim_verisi_olustur([(date_str, res)],
+                                    {(date_str, rn): v for rn, v in secimler.items()})
+                        requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "EGITIM",
+                                                     "Gelen_At": kullanici or "ortak",
+                                                     "Detay": df_gun.to_json(orient="records")}, timeout=15)
+                    except Exception:
+                        pass
                 st.session_state["ogrenme_agirliklari"] = yeni_w
-                st.session_state["isabet_gecmisi"].append({"tarih": date_str, "n": rapor["kosu_sayisi"],
-                                                           "top1": rapor["top1_isabet"],
-                                                           "top3": rapor["top3_isabet"]})
+                karne = {"tarih": date_str, "n": rapor["kosu_sayisi"],
+                         "top1": rapor["top1_isabet"], "top3": rapor["top3_isabet"]}
+                st.session_state["isabet_gecmisi"].append(karne)
+                if API_URL:
+                    try:
+                        requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "KARNE",
+                                                     "Gelen_At": kullanici or "ortak",
+                                                     "Detay": json.dumps(karne)}, timeout=10)
+                    except requests.RequestException:
+                        pass
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("İşlenen koşu", rapor["kosu_sayisi"])
                 c2.metric("1. tahmin isabeti", f"{rapor['top1_isabet']}/{rapor['kosu_sayisi']}")
@@ -618,3 +725,83 @@ elif menu == "Sonuç & Öğrenme":
                         st.success("Öğrenilen ağırlıklar ve kriter performansı bulut arşivine kaydedildi.")
                     except requests.RequestException as e:
                         st.warning(f"Buluta yazılamadı (bu oturumda geçerli): {e}")
+
+# ================================================================ MODEL
+elif menu == "Model":
+    st.markdown("# 🤖 Model — Gerçek Öğrenen Katman")
+    if not ML_HAZIR:
+        st.error("scikit-learn kurulu değil. requirements.txt'e 'scikit-learn' satırını ekleyin.")
+    else:
+        st.caption("Lojistik regresyon: kriterler girdi → kazanma olasılığı çıktı. Eğitim verisi, "
+                   "Sonuç & Öğrenme ekranından girdiğiniz her yarış günüyle bulutta birikir. "
+                   "Backtest, modelin HİÇ GÖRMEDİĞİ koşulardaki isabetini ölçer — dürüst rakam budur.")
+        if st.button("☁️ Buluttaki tüm eğitim verisiyle modeli eğit", type="primary"):
+            if not API_URL:
+                st.error("API_URL tanımlı değil; eğitim verisi bulutta birikmemiş.")
+            else:
+                try:
+                    yanit = requests.get(API_URL, timeout=20); yanit.raise_for_status()
+                    parcalar = []
+                    for satir in yanit.json():
+                        if str(satir.get("Kosu_No")) == "EGITIM":
+                            try:
+                                parcalar.append(pd.read_json(satir.get("Detay", "[]"), orient="records"))
+                            except ValueError:
+                                pass
+                    if not parcalar:
+                        st.warning("Bulutta eğitim verisi yok. Önce Sonuç & Öğrenme'den sonuç girin.")
+                    else:
+                        df = pd.concat(parcalar, ignore_index=True)
+                        model, rapor, kats = ml.egit_ve_backtest(df)
+                        st.session_state["ml_modeli"] = model
+                        c1, c2, c3 = st.columns(3)
+                        c1.metric("Eğitim koşusu", rapor["kosu"])
+                        c2.metric("Backtest 1. isabet", f"%{rapor['cv_top1']}" if rapor["cv_top1"] is not None
+                                  else "veri az (<10 koşu)")
+                        c3.metric("Backtest ilk-3", f"%{rapor['cv_top3']}" if rapor["cv_top3"] is not None else "—")
+                        if rapor["kosu"] < 15:
+                            st.warning(f"⚠️ Yalnızca {rapor['kosu']} koşu ile eğitildi — olasılıklar henüz "
+                                       "güvenilir DEĞİL. 15+ koşuda Tahmin ekranında devreye girer, "
+                                       "100+ koşuda anlamlı olur.")
+                        st.markdown("**Modelin öğrendiği en güçlü kriterler** (pozitif = kazandırıyor):")
+                        st.dataframe(kats.head(15), hide_index=True, use_container_width=True)
+                        try:
+                            requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "MODEL",
+                                                         "Gelen_At": kullanici or "ortak",
+                                                         "Detay": ml.model_kaydet(model)}, timeout=15)
+                            st.success("Model buluta kaydedildi — tüm cihazlarınızda otomatik yüklenecek.")
+                        except requests.RequestException as e:
+                            st.warning(f"Model buluta yazılamadı: {e}")
+                except (requests.RequestException, ValueError) as e:
+                    st.error(f"Eğitim verisi çekilemedi: {e}")
+        if st.session_state.get("ml_modeli") is not None:
+            st.info("✅ Yüklü model var — Tahmin ekranında olasılıklar ve value hesabı aktif.")
+
+# ================================================================ KARNE
+elif menu == "Karne":
+    st.markdown("# 📈 Karne")
+    st.caption("Gerçek sonuçlardan ölçülen performans — süsleme yok.")
+    gecmis = st.session_state["isabet_gecmisi"]
+    if API_URL:
+        try:
+            yanit = requests.get(API_URL, timeout=15)
+            bulut = [json.loads(s.get("Detay", "{}")) for s in yanit.json()
+                     if str(s.get("Kosu_No")) == "KARNE" and str(s.get("Gelen_At", "")) == (kullanici or "ortak")]
+            gorulen = {(g.get("tarih"), g.get("n")) for g in gecmis}
+            gecmis = gecmis + [b for b in bulut if (b.get("tarih"), b.get("n")) not in gorulen]
+        except (requests.RequestException, ValueError):
+            pass
+    if not gecmis:
+        st.info("Henüz karne yok — Sonuç & Öğrenme ekranından sonuç girdikçe burası dolar.")
+    else:
+        df = pd.DataFrame(gecmis).sort_values("tarih")
+        df["1. isabet %"] = (df["top1"] / df["n"] * 100).round(1)
+        df["ilk-3 %"] = (df["top3"] / df["n"] * 100).round(1)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Toplam koşu", int(df["n"].sum()))
+        c2.metric("1. tahmin isabeti", f"{int(df['top1'].sum())}/{int(df['n'].sum())}")
+        c3.metric("Kazanan ilk-3'te", f"{int(df['top3'].sum())}/{int(df['n'].sum())}")
+        st.line_chart(df.set_index("tarih")[["1. isabet %", "ilk-3 %"]])
+        st.dataframe(df[["tarih", "n", "top1", "top3"]].rename(columns={
+            "tarih": "Tarih", "n": "Koşu", "top1": "1. isabet", "top3": "İlk-3"}),
+            hide_index=True, use_container_width=True)
