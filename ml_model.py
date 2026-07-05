@@ -125,73 +125,115 @@ def value_hesapla(olasilik_yuzde: float, oran: float) -> dict:
 
 def kaggle_hazirla(races_dosya, runs_dosya, max_kosu: int | None = None) -> pd.DataFrame:
     """
-    Kaggle 'gdaley/hkracing' veri setini (races.csv + runs.csv, 1997-2005 arası
-    binlerce HK koşusu) bizim kriter adlarımıza çevirir. Her koşu için atların
-    O GÜNE KADARKİ geçmişinden kriterler türetilir (geleceğe bakma yok):
-    A1 rating, A3 kilo, B2 son-3, B5/B6 kariyer, B8 deneyim, B9 mesafe rekoru,
-    B13 dinlenme, B14 yüzey uyumu, D4 kulvar. Çıktı egit_ve_backtest ile uyumlu.
+    Kaggle 'gdaley/hkracing' setini (1997-2005, 6.349 HK koşusu) MOTORLA AYNI
+    kriter adları ve ölçekleriyle eğitim satırlarına çevirir. Her değer atın
+    O GÜNE KADARKİ geçmişinden türetilir (geleceğe bakma yok). Jokey/antrenör
+    kazanma yüzdeleri de o güne kadarki gerçek sicilden yürütülür.
     """
     races = pd.read_csv(races_dosya)
     runs = pd.read_csv(runs_dosya)
     races.columns = [c.strip().lower() for c in races.columns]
     runs.columns = [c.strip().lower() for c in runs.columns]
-    gerekli = {"race_id", "horse_id", "result"}
-    if not gerekli.issubset(runs.columns):
-        raise ValueError(f"runs.csv beklenen kolonları içermiyor: {gerekli - set(runs.columns)}")
-    df = runs.merge(races[[c for c in ("race_id", "date", "distance", "surface", "venue")
+    df = runs.merge(races[[c for c in ("race_id", "date", "surface", "distance", "race_class")
                            if c in races.columns]], on="race_id", how="left")
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.sort_values(["date", "race_id"] if "date" in df.columns else ["race_id"])
+        df = df.sort_values(["date", "race_id"])
+    df = df[pd.notna(df["result"])]
     if max_kosu:
         secilen = df["race_id"].drop_duplicates().tail(max_kosu)
         df = df[df["race_id"].isin(secilen)]
 
-    gecmis: dict = {}  # horse_id → geçmiş koşu listesi
+    at_gecmis, jokey, antrenor = {}, {}, {}
     satirlar = []
     for race_id, grup in df.groupby("race_id", sort=False):
-        kayitlar = []
-        for _, row in grup.iterrows():
-            hid = row["horse_id"]
-            g = gecmis.get(hid, [])
-            n = len(g)
-            w = sum(1 for x in g if x["result"] == 1)
-            t3 = sum(1 for x in g if x["result"] <= 3)
-            ayni_mesafe = [x for x in g if x.get("distance") == row.get("distance")]
-            ayni_yuzey = [x for x in g if x.get("surface") == row.get("surface")]
+        rc = grup.iloc[0]
+        alan = len(grup)
+        guncel = []
+        onculer = 0
+        on_kayitlar = []
+        for _, r in grup.iterrows():
+            g = at_gecmis.get(r["horse_id"], [])
+            erken = [x["ep"] for x in g[-3:] if x["ep"] == x["ep"]]  # NaN filtre
+            oncu = (sum(erken) / len(erken) <= 2.5) if erken else None
+            onculer += 1 if oncu else 0
+            on_kayitlar.append((r, g, oncu))
+        for r, g, oncu in on_kayitlar:
+            n = len(g); w = sum(1 for x in g if x["res"] == 1)
+            t3 = sum(1 for x in g if x["res"] <= 3)
             son3 = g[-3:]
+            ayni_m = [x for x in g if x["dist"] == rc.get("distance")]
+            ayni_y = [x for x in g if x["surf"] == rc.get("surface")]
+            js = jokey.get(r.get("jockey_id"), (0, 0))
+            ts = antrenor.get(r.get("trainer_id"), (0, 0))
+            hizlar = [x["hiz"] for x in g[-5:]]
+            yas = r.get("horse_age")
             satir = {
-                "A1 Resmi Rating": float(row["horse_rating"]) if pd.notna(row.get("horse_rating")) else 50.0,
-                "A3 Kilo Avantajı": -float(row["actual_weight"]) if pd.notna(row.get("actual_weight")) else 50.0,
-                "B2 Son 3 Koşu Ort.": (sum(max(0, 100 - (x["result"] - 1) * 12) for x in son3) / len(son3)) if son3 else 50.0,
+                "A1 Resmi Rating": float(r["horse_rating"]) if pd.notna(r.get("horse_rating")) else np.nan,
+                "A3 Kilo Avantajı": -float(r["actual_weight"]) if pd.notna(r.get("actual_weight")) else np.nan,
+                "B2 Son 3 Koşu Ort.": (np.mean([max(0, 100 - (x["res"] - 1) * 12) for x in son3])
+                                       if son3 else 50.0),
                 "B5 Kariyer Kazanma %": min(100, w / n * 400) if n else 50.0,
                 "B6 Kariyer İlk-3 %": min(100, t3 / n * 200) if n else 50.0,
                 "B8 Deneyim": min(100, n * 8),
-                "B9 Mesafe Rekoru": (min(100, sum(1 for x in ayni_mesafe if x["result"] <= 3) /
-                                         len(ayni_mesafe) * 200) if ayni_mesafe else 50.0),
-                "B14 Yüzey Uyumu (Çim)": (min(100, sum(1 for x in ayni_yuzey if x["result"] <= 3) /
-                                              len(ayni_yuzey) * 200) if ayni_yuzey else 50.0),
-                "B13 Dinlenme Uyumu": 50.0,
-                "D4 İç Kulvar": (100 - (float(row["draw"]) - 1) * 7) if pd.notna(row.get("draw")) else 50.0,
+                "B9 Mesafe Rekoru": (min(100, sum(1 for x in ayni_m if x["res"] <= 3) / len(ayni_m) * 150)
+                                     if len(ayni_m) >= 2 else 50.0),
+                "B16 Yaş": (80 if yas == 2 else 100 if 3 <= (yas or 0) <= 5 else 65 if yas == 6 else 45)
+                           if pd.notna(yas) else 50.0,
+                "C1 Jokey Kazanma %": min(100, js[1] / js[0] * 500) if js[0] >= 20 else 50.0,
+                "C2 Antrenör Kazanma %": min(100, ts[1] / ts[0] * 500) if ts[0] >= 20 else 50.0,
+                "D4 İç Kulvar": (100 - (float(r["draw"]) - 1) / max(alan - 1, 1) * 100)
+                                if pd.notna(r.get("draw")) else 50.0,
+                "F1 En İyi Hız Figürü": max(hizlar) * 100 if hizlar else np.nan,
+                "F2 Ortalama Hız Figürü": np.mean(hizlar) * 100 if hizlar else np.nan,
+                "F4 Tempo Senaryosu": (50.0 if oncu is None else
+                                       (78 if oncu and onculer <= 2 else 58 if oncu and onculer == 3
+                                        else 38 if oncu else
+                                        (42 if onculer <= 1 else 52 if onculer <= 3 else 70))),
                 "kosu_id": str(race_id),
-                "kazandi": 1 if row["result"] == 1 else 0,
-                "ilk4": 1 if row["result"] <= 4 else 0,
+                "kazandi": 1 if r["result"] == 1 else 0,
+                "ilk4": 1 if r["result"] <= 4 else 0,
             }
-            if "date" in df.columns and g and pd.notna(row.get("date")) and g[-1].get("date") is not None:
-                gunler = (row["date"] - g[-1]["date"]).days
-                satir["B13 Dinlenme Uyumu"] = 100 if 14 <= gunler <= 45 else (65 if gunler <= 90 else 45)
+            # Yüzey uyumu: bugünkü yüzeye denk gelen kolona yaz (motor adlarıyla)
+            uyum = (min(100, sum(1 for x in ayni_y if x["res"] <= 3) / len(ayni_y) * 150)
+                    if len(ayni_y) >= 2 else 50.0)
+            if rc.get("surface") == 1:
+                satir["B14 Yüzey Uyumu (Kum)"] = uyum
+                satir["B14 Yüzey Uyumu (Çim)"] = 50.0
+            else:
+                satir["B14 Yüzey Uyumu (Çim)"] = uyum
+                satir["B14 Yüzey Uyumu (Kum)"] = 50.0
+            # Dinlenme + sınıf hareketi (motor kovalarıyla)
+            if g and "date" in df.columns and pd.notna(rc.get("date")) and g[-1]["tarih"] is not None:
+                gun = (rc["date"] - g[-1]["tarih"]).days
+                satir["B13 Dinlenme Uyumu"] = (100 if 14 <= gun <= 45 else 55 if gun < 14
+                                               else 65 if gun <= 90 else 50)
+            else:
+                satir["B13 Dinlenme Uyumu"] = 50.0
+            if g and pd.notna(g[-1]["cls"]) and pd.notna(rc.get("race_class")):
+                hareket = rc["race_class"] - g[-1]["cls"]
+                satir["A6 Sınıf Hareketi"] = 75 if hareket > 0 else (50 if hareket == 0 else 30)
+            else:
+                satir["A6 Sınıf Hareketi"] = 50.0
             satirlar.append(satir)
-            kayitlar.append((hid, {"result": int(row["result"]) if pd.notna(row["result"]) else 99,
-                                   "distance": row.get("distance"), "surface": row.get("surface"),
-                                   "date": row.get("date") if "date" in df.columns else None}))
-        for hid, kayit in kayitlar:  # koşu bittikten SONRA geçmişe ekle (sızıntı yok)
-            gecmis.setdefault(hid, []).append(kayit)
+            hiz_pct = 1 - (r["result"] - 1) / max(alan - 1, 1)
+            guncel.append((r["horse_id"], r.get("jockey_id"), r.get("trainer_id"),
+                           {"res": int(r["result"]), "dist": rc.get("distance"),
+                            "surf": rc.get("surface"), "tarih": rc.get("date"),
+                            "cls": rc.get("race_class"), "ep": r.get("position_sec1", np.nan),
+                            "hiz": hiz_pct}, int(r["result"] == 1)))
+        for hid, jid, tid, kayit, kazandi in guncel:
+            at_gecmis.setdefault(hid, []).append(kayit)
+            jn, jw = jokey.get(jid, (0, 0)); jokey[jid] = (jn + 1, jw + kazandi)
+            tn, tw = antrenor.get(tid, (0, 0)); antrenor[tid] = (tn + 1, tw + kazandi)
+
     out = pd.DataFrame(satirlar)
-    # kilo negatif ölçekte; koşu içi min-max ile 0-100'e getir
-    if "A3 Kilo Avantajı" in out.columns:
-        out["A3 Kilo Avantajı"] = out.groupby("kosu_id")["A3 Kilo Avantajı"].transform(
-            lambda s: 50.0 if s.nunique() <= 1 else (s - s.min()) / (s.max() - s.min()) * 100)
-    return out
+    # A1 ve A3'ü koşu içi 0-100'e normalize et (motorla aynı mantık)
+    for kol in ("A1 Resmi Rating", "A3 Kilo Avantajı"):
+        out[kol] = out.groupby("kosu_id")[kol].transform(
+            lambda s: pd.Series(50.0, index=s.index) if s.nunique() <= 1
+            else (s - s.min()) / (s.max() - s.min()) * 100)
+    return out.fillna(50.0)
 
 
 def model_kaydet(model) -> str:
