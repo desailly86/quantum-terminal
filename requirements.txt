@@ -5,3 +5,5 @@ pypdf
 weasyprint
 beautifulsoup4
 lxml
+scikit-learn
+numpy
