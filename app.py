@@ -777,6 +777,43 @@ elif menu == "Model":
         if st.session_state.get("ml_modeli") is not None:
             st.info("✅ Yüklü model var — Tahmin ekranında olasılıklar ve value hesabı aktif.")
 
+        st.write("---")
+        st.markdown("### 📚 Tarihsel veriyle hızlı başlangıç (Kaggle)")
+        st.caption("Kendi veriniz birikene kadar modeli binlerce gerçek HK koşusuyla eğitebilirsiniz. "
+                   "Adımlar: kaggle.com'a ücretsiz üye olun → 'Horse Racing in HK' (gdaley/hkracing) "
+                   "veri setini indirin → zip içinden **races.csv** ve **runs.csv**'yi buraya yükleyin. "
+                   "Sistem her atın o güne kadarki geçmişinden kriterlerimizi türetir (geleceğe bakma "
+                   "yok) ve dürüst backtest raporu verir.")
+        kag1 = st.file_uploader("races.csv", type=["csv"], key="kagraces")
+        kag2 = st.file_uploader("runs.csv", type=["csv"], key="kagruns")
+        kac = st.slider("Kullanılacak son koşu sayısı", 500, 6000, 2000, step=500,
+                        help="Fazlası daha iyi öğrenir ama eğitim süresi uzar.")
+        if st.button("📚 Tarihsel veriyle eğit", disabled=not (kag1 and kag2)):
+            with st.spinner("Tarihsel koşular kriterlere çevriliyor ve model eğitiliyor…"):
+                try:
+                    df_k = ml.kaggle_hazirla(kag1, kag2, max_kosu=kac)
+                    model, rapor, kats = ml.egit_ve_backtest(df_k)
+                    st.session_state["ml_modeli"] = model
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Eğitim koşusu", rapor["kosu"])
+                    c2.metric("Backtest 1. isabet", f"%{rapor['cv_top1']}")
+                    c3.metric("Backtest ilk-3", f"%{rapor['cv_top3']}")
+                    st.dataframe(kats, hide_index=True, use_container_width=True)
+                    st.caption("Not: tarihsel model yalnızca ortak kriterleri kullanır (rating, kilo, "
+                               "form, kariyer, mesafe/yüzey rekoru, kulvar); PDF'e özgü kriterler "
+                               "(hız figürü, deneme, veteriner) bugünkü analizde nötr sayılır. "
+                               "Backtest rakamı geçmişin ölçümüdür, gelecek garantisi değildir.")
+                    if API_URL:
+                        try:
+                            requests.post(API_URL, json={"Tarih": date_str, "Kosu_No": "MODEL",
+                                                         "Gelen_At": kullanici or "ortak",
+                                                         "Detay": ml.model_kaydet(model)}, timeout=15)
+                            st.success("Tarihsel model buluta kaydedildi.")
+                        except requests.RequestException as e:
+                            st.warning(f"Buluta yazılamadı: {e}")
+                except Exception as e:
+                    st.error(f"Tarihsel eğitim başarısız: {e}")
+
 # ================================================================ KARNE
 elif menu == "Karne":
     st.markdown("# 📈 Karne")
