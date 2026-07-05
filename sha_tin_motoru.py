@@ -27,11 +27,11 @@ import copy
 NOTR = 50.0  # veri yoksa kullanılan nötr puan
 
 VARSAYILAN_AGIRLIKLAR = {
-    "rating": 0.28, "form": 0.30, "insan": 0.18, "kosul": 0.16, "risk": 0.08,
+    "rating": 0.22, "form": 0.26, "insan": 0.14, "kosul": 0.12, "risk": 0.08, "hiz": 0.18,
 }
 KATEGORI_ADLARI = {
     "rating": "Rating & Sınıf", "form": "Form", "insan": "İnsan Faktörü",
-    "kosul": "Koşul Uyumu", "risk": "Hazırlık & Risk",
+    "kosul": "Koşul Uyumu", "risk": "Hazırlık & Risk", "hiz": "Hız & Zaman (AVELOR)",
 }
 
 # KRİTER AĞIRLIKLARI — 04.07.2026 Sha Tin gününün (7 koşu) ölçülmüş kriter
@@ -57,6 +57,8 @@ KRITER_AGIRLIKLARI = {
     "D7 İyi Zemin (G) Uyumu": 1.74,
     "E1 Deneme Derecesi": 1.11, "E2 Deneme Galibi": 0.46, "E3 Veteriner Kaydı": 1.46,
     "E4 Ekipman Değişikliği": 0.57, "E5 Az Koşu Belirsizliği": 1.26, "E6 Sağlık Geçmişi": 1.38,
+    "F1 En İyi Hız Figürü": 1.5, "F2 Ortalama Hız Figürü": 1.3,
+    "F3 Kapanış Gücü (Son 400m)": 1.3, "F4 Tempo Senaryosu": 1.1,
 }
 
 
@@ -92,6 +94,8 @@ def pdf_ayristir(pdf_kaynagi) -> dict:
         "tarih": _tarih_bul(tam_metin),
     }
     veri["detay"] = _detay_ayristir(sayfalar, veri["tarih"])
+    veri["standart"] = _standart_zamanlar_ayristir(tam_metin)
+    veri["tempo"] = _tempo_ayristir(sayfalar)
     return veri
 
 
@@ -188,15 +192,24 @@ _GECMIS_SATIR = re.compile(
     r"(GF|GY|GD|SE|WS|WF|SL|G|Y|S|H)\b")
 
 def _gecmis_kosulari_oku(form_blok):
-    """Eski koşu satırlarından [(derece, saha, pist, mesafe, zemin)] listesi."""
+    """Eski koşu satırlarından [(derece, saha, pist, mesafe, zemin, zaman bilgileri)]"""
     gecmis = []
-    for m in _GECMIS_SATIR.finditer(form_blok):
+    for satir in form_blok.split("\n"):
+        m = _GECMIS_SATIR.search(satir)
+        if not m:
+            continue
         try:
-            gecmis.append({"pos": int(m.group(1)), "alan": int(m.group(2)),
-                           "pist": m.group(3), "mesafe": int(m.group(4)),
-                           "zemin": m.group(5)})
+            kayit = {"pos": int(m.group(1)), "alan": int(m.group(2)),
+                     "pist": m.group(3), "mesafe": int(m.group(4)), "zemin": m.group(5)}
         except ValueError:
-            pass
+            continue
+        zaman = _kosu_zamani_oku(satir)
+        if zaman:
+            kayit["sinif"], kayit["lider_sn"], kayit["son400"], pos2, kayit["fark"] = zaman
+            if pos2:
+                kayit["pos"] = pos2
+        kayit["erken_poz"] = _erken_pozisyon(satir)
+        gecmis.append(kayit)
     return gecmis
 
 
@@ -218,6 +231,111 @@ def profil_ozeti(gecmis, bugun_mesafe=None, bugun_yuzey=None):
     if adaylar:
         en_iyi_mesafe = max(adaylar, key=lambda x: (x[1]["w"] / x[1]["n"], x[1]["t3"] / x[1]["n"]))[0]
     return {"mesafeler": mesafeler, "yuzeyler": yuzeyler, "en_iyi_mesafe": en_iyi_mesafe}
+
+
+def _zaman_sn(t):
+    """'1.09.74' → 69.74 sn"""
+    p = t.split(".")
+    return int(p[0]) * 60 + int(p[1]) + int(p[2]) / 100.0
+
+
+_FARK_HARITA = {"Sh": 0.1, "SH": 0.1, "Nk": 0.3, "NK": 0.3, "Hd": 0.15, "HD": 0.15,
+                "Ns": 0.05, "NS": 0.05, "DH": 0.0, "-": 0.0, "": 0.0, "ML": 30.0}
+
+def _fark_boy(s):
+    """'3¼' → 3.25 boy; 'Sh' → 0.1 vb."""
+    if s in _FARK_HARITA:
+        return _FARK_HARITA[s]
+    s = s.replace("¼", ".25").replace("½", ".5").replace("¾", ".75")
+    try:
+        return float(s) if s else 0.0
+    except ValueError:
+        return None
+
+
+def _standart_zamanlar_ayristir(metin):
+    """C4: {(yüzey, mesafe, sınıf): (toplam_sn, son400_sn)}"""
+    tablo = {}
+    yuzey, mesafe = "Turf", None
+    for satir in metin.split("\n"):
+        s = satir.strip()
+        if "All Weather" in s:
+            yuzey = "AWT"; continue
+        if "Turf Track" in s:
+            yuzey = "Turf"; continue
+        if re.fullmatch(r"\d{4}", s):
+            mesafe = int(s); continue
+        if s.startswith("Gear Change"):
+            mesafe = None
+        m = re.match(r"^(Group Race|Class \d|G\S{0,4}in Race)\s+(\d\.\d{2}\.\d{2})(.*)$", s)
+        if m and mesafe:
+            sinif = "Griffin Race" if "in Race" in m.group(1) else m.group(1)
+            son400 = None
+            kalan = re.findall(r"\d{2}\.\d{2}", m.group(3))
+            if kalan:
+                son400 = float(kalan[-1])
+            tablo[(yuzey, mesafe, sinif)] = (_zaman_sn(m.group(2)), son400)
+    return tablo
+
+
+_SINIF_TOKEN = re.compile(r"\d{1,2}/\d{1,2}/\d{2}\s+([A-Z0-9]+)")
+_ZAMAN_BLOK = re.compile(r"(\d{2}\.\d{2})\s+(\d\.\d{2}\.\d{2})")
+_SON_DERECE = re.compile(
+    r"\s(\d{1,2})\s+((?:\d+)?[¼½¾]?|Sh|SH|Nk|NK|Hd|HD|Ns|NS|DH|ML|-)\s+(\d{1,3}\.\d)\s*f?\s+(?:[A-Z][A-Z/\-\d]{0,11}\s+)?\d{3,4}\s")
+
+def _kosu_zamani_oku(satir):
+    """Form satırından (sınıf_etiketi, lider_zamanı_sn, kendi_son400, bitis_pos, fark_boy)"""
+    mz = _ZAMAN_BLOK.search(satir)
+    if not mz:
+        return None
+    son400, lider = float(mz.group(1)), _zaman_sn(mz.group(2))
+    ms = _SINIF_TOKEN.search(satir)
+    ham = ms.group(1) if ms else ""
+    if ham.startswith("G") and (ham in ("G1", "G2", "G3") or "GROUP" in ham.upper()):
+        sinif = "Group Race"
+    elif "GRIF" in ham.upper():
+        sinif = "Griffin Race"
+    elif ham[:1].isdigit():
+        sinif = f"Class {ham[0]}"
+    else:
+        sinif = None
+    md = _SON_DERECE.search(satir)
+    pos = int(md.group(1)) if md else None
+    fark = _fark_boy(md.group(2)) if md else None
+    return sinif, lider, son400, pos, fark
+
+
+def _erken_pozisyon(satir):
+    """Form satırındaki koşu içi pozisyonlardan İLK çağrı pozisyonunu okur (öncü tespiti)."""
+    mz = _ZAMAN_BLOK.search(satir)
+    if not mz:
+        return None
+    kuyruk = satir[mz.end():]
+    tokenlar = kuyruk.split()
+    i = 0
+    while i < len(tokenlar) and (re.fullmatch(r"\d{2}\.\d{2}", tokenlar[i]) or tokenlar[i] == "-"):
+        i += 1  # atın kendi ara zamanlarını geç
+    if i < len(tokenlar) and re.fullmatch(r"\d{1,2}", tokenlar[i]):
+        return int(tokenlar[i])
+    return None
+
+
+def _tempo_ayristir(sayfalar):
+    """Speed Map sayfalarından: {race_no: {'pace': ..., 'liderler': {at adları}}}"""
+    tempo = {}
+    for sayfa in sayfalar:
+        if "Speed Map" not in sayfa:
+            continue
+        bloklar = re.split(r"Race\s+(\d+)\s*\|", sayfa)
+        for i in range(1, len(bloklar) - 1, 2):
+            rn, metin = int(bloklar[i]), bloklar[i + 1]
+            mp = re.search(r"Pace:\s*(GOOD TO SLOW|GOOD TO FAST|GOOD|SLOW|FAST)", metin)
+            liderler = set()
+            for cumle in re.split(r"(?<=[.!])\s+", metin):
+                if re.search(r"\b(led|lead|leader|positive|front|speed)\b", cumle, re.I):
+                    liderler.update(re.findall(r"\b([A-Z][A-Z']+(?:\s+[A-Z][A-Z']+)+)\b", cumle))
+            tempo[rn] = {"pace": (mp.group(1) if mp else ""), "liderler": liderler}
+    return tempo
 
 
 def _tarih_bul(metin):
@@ -511,7 +629,43 @@ def analiz_et(veri: dict, agirliklar: dict | None = None,
             k["E5 Az Koşu Belirsizliği"] = 100 if st >= 5 else st * 20
             k["E6 Sağlık Geçmişi"] = 25 if dt.get("saglik") else 100  # resmi kanama/kalp/roarer kaydı
 
-            # ---- Kategori ve toplam (kriter ağırlıklı ortalama) ----
+            # ---- F. HIZ & ZAMAN (AVELOR'a özgü — kronometreden bağımsız güç puanı) ----
+            figurler, kapanislar = [], []
+            for g in (dt.get("gecmis") or [])[:6]:
+                std = veri.get("standart", {}).get(
+                    ("AWT" if g["pist"] == "AWT" else "Turf", g["mesafe"], g.get("sinif")))
+                if std and g.get("lider_sn") and g["pist"] in ("ST", "AWT"):
+                    kendi = g["lider_sn"] + (0 if g["pos"] == 1 else (g.get("fark") or 0) * 0.17)
+                    figurler.append(std[0] - kendi)  # + = standarttan hızlı
+                    if std[1] and g.get("son400"):
+                        kapanislar.append(std[1] - g["son400"])  # + = standarttan hızlı kapanış
+            h["_fig_max"] = max(figurler) if figurler else None
+            h["_fig_ort"] = sum(figurler) / len(figurler) if figurler else None
+            h["_kapanis"] = max(kapanislar) if kapanislar else None
+            erkenler = [g["erken_poz"] for g in (dt.get("gecmis") or [])[:6] if g.get("erken_poz")]
+            h["_oncu"] = (sum(erkenler) / len(erkenler) <= 2.5) if erkenler else None
+            h["_k"] = k
+
+        # ---- İKİNCİ GEÇİŞ: hız figürleri (koşu içi normalize) + kategoriler ----
+        fig_max_l = [x.get("_fig_max") for x in atlar]
+        fig_ort_l = [x.get("_fig_ort") for x in atlar]
+        kapanis_l = [x.get("_kapanis") for x in atlar]
+        onculer = sum(1 for x in atlar if x.get("_oncu"))
+        for h in atlar:
+            k = h.pop("_k")
+            k["F1 En İyi Hız Figürü"] = _n(h.get("_fig_max"), fig_max_l)
+            k["F2 Ortalama Hız Figürü"] = _n(h.get("_fig_ort"), fig_ort_l)
+            k["F3 Kapanış Gücü (Son 400m)"] = _n(h.get("_kapanis"), kapanis_l)
+            # Tempo: atın kendi koşu stilinden (erken pozisyonlar) + koşudaki öncü sayısından
+            if h.get("_oncu") is None:
+                k["F4 Tempo Senaryosu"] = NOTR
+            elif h["_oncu"]:
+                k["F4 Tempo Senaryosu"] = 78 if onculer <= 2 else (58 if onculer == 3 else 38)
+            else:
+                k["F4 Tempo Senaryosu"] = 42 if onculer <= 1 else (52 if onculer <= 3 else 70)
+            for alan in ("_fig_max", "_fig_ort", "_kapanis", "_oncu"):
+                h.pop(alan, None)
+
             def _kat_ort(harf):
                 pay = payda = 0.0
                 for a, v in k.items():
@@ -521,7 +675,7 @@ def analiz_et(veri: dict, agirliklar: dict | None = None,
                         payda += katsayi
                 return pay / payda if payda else NOTR
             kat = {"rating": _kat_ort("A"), "form": _kat_ort("B"), "insan": _kat_ort("C"),
-                   "kosul": _kat_ort("D"), "risk": _kat_ort("E")}
+                   "kosul": _kat_ort("D"), "risk": _kat_ort("E"), "hiz": _kat_ort("F")}
             h["kriterler"] = {a: round(v, 1) for a, v in k.items()}
             h["kategoriler"] = {a: round(v, 1) for a, v in kat.items()}
             h["profil"] = profil_ozeti(dt.get("gecmis", []), kosu["distance"], kosu["surface"])
