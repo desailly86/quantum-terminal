@@ -34,31 +34,33 @@ KATEGORI_ADLARI = {
     "kosul": "Koşul Uyumu", "risk": "Hazırlık & Risk", "hiz": "Hız & Zaman (AVELOR)",
 }
 
-# KRİTER AĞIRLIKLARI — 04.07.2026 Sha Tin gününün (7 koşu) ölçülmüş kriter
+# KRİTER AĞIRLIKLARI — 6.348 gerçek HK koşusu (1997-2005, Kaggle) + 04.07.2026
 # performansından türetildi: agirlik = 1 + (performans - 55) x 0.08, [0.4-2.2].
 # İyi bilen kriterler (Tutarlılık, Kariyer İlk-3, form ailesi) 1.6-2.2x etkili;
 # zayıflar (resmi rating, draw istatistikleri, deneme galibi) 0.5x'e düşürüldü.
 # Her sonuç girişinde kriter_agirliklari_turet() ile gerçek performansa göre
 # kendini günceller — tek güne aşırı uyum riskine karşı harmanlanarak (%70 eski).
 KRITER_AGIRLIKLARI = {
-    "A1 Resmi Rating": 0.58, "A2 Sınıf Bandı Konumu": 0.58, "A3 Kilo Avantajı": 1.24,
+    "A1 Resmi Rating": 0.79, "A2 Sınıf Bandı Konumu": 0.58, "A3 Kilo Avantajı": 0.4,
     "A4 Rating/Kilo Dengesi": 1.38, "A5 Ortalama Üstü Rating": 1.03,
-    "B1 Son Koşu": 1.4, "B2 Son 3 Koşu Ort.": 1.82, "B3 Son 6 Ağırlıklı": 1.94,
-    "B4 Form Trendi": 0.77, "B5 Kariyer Kazanma %": 1.7, "B6 Kariyer İlk-3 %": 2.2,
-    "B7 Tutarlılık": 2.2, "B8 Deneyim": 1.47, "B9 Mesafe Rekoru": 1.62,
+    "B1 Son Koşu": 1.4, "B2 Son 3 Koşu Ort.": 2.04, "B3 Son 6 Ağırlıklı": 1.94,
+    "B4 Form Trendi": 0.77, "B5 Kariyer Kazanma %": 1.27, "B6 Kariyer İlk-3 %": 1.68,
+    "B7 Tutarlılık": 2.2, "B8 Deneyim": 0.47, "B9 Mesafe Rekoru": 1.67,
     "B10 Pist+Mesafe Rekoru": 1.74, "B11 Sınıf Rekoru": 1.09, "B12 Sezon Formu": 1.89,
-    "B13 Dinlenme Uyumu": 0.94, "B14 Yüzey Uyumu (Kum)": 1.94, "B14 Yüzey Uyumu (Çim)": 1.76,
-    "C1 Jokey Kazanma %": 0.83, "C2 Antrenör Kazanma %": 0.75, "C3 Jokey×Antrenör": 1.01,
+    "B13 Dinlenme Uyumu": 0.74, "B14 Yüzey Uyumu (Kum)": 1.69, "B14 Yüzey Uyumu (Çim)": 1.69,
+    "C1 Jokey Kazanma %": 1.77, "C2 Antrenör Kazanma %": 1.26, "C3 Jokey×Antrenör": 1.01,
     "C4 Elit Jokey": 1.1, "C5 Elit Antrenör": 1.07, "C6 Jokey Atanmış": 1.38,
     "C7 Jokey-Antrenör Ortak Geçmişi": 1.22, "C8 At-Jokey Ortak Sicili": 0.95,
     "D1 Draw Kazanma % (12ay)": 0.5, "D2 Draw Tabela % (12ay)": 0.75,
-    "D3 Draw İlk-4 % (12ay)": 0.78, "D4 İç Kulvar": 1.26,
+    "D3 Draw İlk-4 % (12ay)": 0.78, "D4 İç Kulvar": 1.07,
     "D5 Geniş Alan Dış Draw Baskısı": 1.48, "D6 Kilo×Mesafe": 1.46,
     "D7 İyi Zemin (G) Uyumu": 1.74,
     "E1 Deneme Derecesi": 1.11, "E2 Deneme Galibi": 0.46, "E3 Veteriner Kaydı": 1.46,
     "E4 Ekipman Değişikliği": 0.57, "E5 Az Koşu Belirsizliği": 1.26, "E6 Sağlık Geçmişi": 1.38,
-    "F1 En İyi Hız Figürü": 1.5, "F2 Ortalama Hız Figürü": 1.3,
-    "F3 Kapanış Gücü (Son 400m)": 1.3, "F4 Tempo Senaryosu": 1.1,
+    "F1 En İyi Hız Figürü": 1.67, "F2 Ortalama Hız Figürü": 1.67,
+    "F3 Kapanış Gücü (Son 400m)": 1.3, "F4 Tempo Senaryosu": 1.17,
+    "B16 Yaş": 0.74,
+    "A6 Sınıf Hareketi": 0.58,
 }
 
 
@@ -117,7 +119,7 @@ def _detay_ayristir(sayfalar, bulten_tarihi):
     ortak geçmişi, zemin (G) kaydı, sağlık notları, son koşudan bu yana gün.
     """
     detay = {}
-    isim_kalip = re.compile(r"^([A-Z][A-Z' .\-]+?)\s+\((?:AUS|NZ|IRE|GB|USA|FR|SAF|ARG|GER|JPN|ITY|MAC)\)\s+\d", re.M)
+    isim_kalip = re.compile(r"^([A-Z][A-Z' .\-]+?)\s+\((?:AUS|NZ|IRE|GB|USA|FR|SAF|ARG|GER|JPN|ITY|MAC)\)\s+(\d{1,2})\b", re.M)
     try:
         y, a, g = (int(x) for x in bulten_tarihi.split("-"))
         import datetime as _dt
@@ -134,6 +136,7 @@ def _detay_ayristir(sayfalar, bulten_tarihi):
             # Form satırları (eski koşular) isimden ÖNCE gelir:
             form_blok = sayfa[adlar[i-1].start() if i > 0 else 0: m.start()]
             kayit = {
+                "yas": int(m.group(2)) if m.group(2) else None,
                 "dist": _rec_oku(blok, "Dist"),
                 "trk_dist": _rec_oku(blok, "Trk/Dist"),
                 "sinif": _rec_oku(blok, "Class"),
@@ -581,7 +584,17 @@ def analiz_et(veri: dict, agirliklar: dict | None = None,
                 k["B13 Dinlenme Uyumu"] = 55
             else:
                 k["B13 Dinlenme Uyumu"] = 65
+            # A6: son koşusuna göre sınıf hareketi (+ = bugün daha kolay sınıf)
+            son_sinif = next((g.get("sinif") for g in (dt.get("gecmis") or []) if g.get("sinif")), None)
+            bugun_sinif = re.search(r"Class (\d)", kosu.get("class", "") or "")
+            if son_sinif and bugun_sinif and son_sinif.startswith("Class"):
+                hareket = int(bugun_sinif.group(1)) - int(son_sinif[-1])
+                k["A6 Sınıf Hareketi"] = 75 if hareket > 0 else (50 if hareket == 0 else 30)
+            else:
+                k["A6 Sınıf Hareketi"] = NOTR
             # Bugünkü yüzey: kum (AWT) günü → AWT sicili; çim günü → ST+HV sicili
+            yas = dt.get("yas")
+            k["B16 Yaş"] = (80 if yas == 2 else 100 if 3 <= (yas or 0) <= 5 else 65 if yas == 6 else 45) if yas else NOTR
             if kosu["surface"] == "AWT":
                 k["B14 Yüzey Uyumu (Kum)"] = _rec_puan(dt.get("awt"))
             else:
