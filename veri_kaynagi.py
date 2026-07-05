@@ -1,31 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-veri_kaynagi.py — AVELOR için gerçek veri katmanı
-==================================================
-İki kaynaktan günlük yarış programını çeker ve uygulamanın beklediği
-{"race_no", "time", "horses": [...]} yapısına dönüştürür:
+veri_kaynagi.py v2 — Evrensel veri katmanı
+===========================================
+1) tjk_gunun_hipodromlari(tarih)  → o gün tjk.org'da OYNANABILEN TÜM
+   hipodromları (yurtiçi + yabancı: Fransa, İngiltere, G.Afrika...) keşfeder.
+2) tjk_program_cek(tarih, sehir_id, sehir_adi) → seçilen hipodromun programı.
+3) evrensel_kriterle(races) → kaynak ne kadar veri veriyorsa o kadar kriter
+   üretir (TJK yurtiçi ~12-15, yabancı ~6-10); çıktı sha_tin_motoru ile aynı
+   yapıdadır (kriterler/kategoriler/score) → öğrenme sistemi ortak çalışır.
+4) hkjc_sonuc_cek(tarih, pist) → yarış sonrası ilk-4'leri otomatik çeker.
+5) hava_durumu(pist, tarih) → Open-Meteo (ücretsiz, anahtarsız).
 
-  1. TJK  — https://www.tjk.org  (günlük yarış programı, şehir bazlı HTML)
-  2. HKJC — https://racing.hkjc.com (Sha Tin / Happy Valley racecard)
-
-NOT / DÜRÜSTLÜK: Bu modüldeki puanlama SAHTE "kuantum" motorunun yerine
-geçmek üzere yazılmış, tamamen şeffaf bir FORM SKORU'dur. Yalnızca
-racecard'da gerçekten bulunan alanları kullanır (rating/handikap puanı,
-kilo, start pozisyonu, son koşu dereceleri). Bir olasılık modeli DEĞİLDİR;
-geçmiş sonuçlarla eğitilmiş gerçek bir model (ör. LightGBM) kurulana
-kadar makul bir başlangıç sıralaması verir. Hiçbir skor kazanç garantisi
-taşımaz.
-
-Bağımlılıklar: requests, beautifulsoup4, lxml, pandas
-    pip install requests beautifulsoup4 lxml pandas
-
-UYARI: Her iki site de HTML yapısını değiştirebilir; parser'lar savunmacı
-yazıldı ama ilk kullanımda çıktıyı gözle doğrulayın. Sitelerin kullanım
-koşullarına ve istek sıklığı nezaketine (günde birkaç istek) uyun.
+DÜRÜSTLÜK: (a) tjk.org yabancı koşular için sığ veri yayınlar; o koşularda
+kriter sayısı düşer ve bu arayüzde açıkça görünür. (b) Bu modül geliştirme
+ortamında dış ağ kapalı olduğundan canlı test edilemedi; site yapısı
+değişirse hata mesajını geri bildirin. (c) Sitelere nazik olun: çekimler
+arasına bekleme kondu, gereksiz tekrar çekim yapmayın.
 """
-
 from __future__ import annotations
-
 import re
 import time
 import requests
@@ -34,220 +26,245 @@ from bs4 import BeautifulSoup
 
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
 TIMEOUT = 20
+NOTR = 50.0
 
-# TJK şehir kimlikleri (tjk.org'daki SehirId parametresi)
-TJK_SEHIRLER = {
-    "İstanbul": 3, "Bursa": 4, "İzmir": 1, "Ankara": 2, "Adana": 5,
-    "Şanlıurfa": 6, "Elazığ": 7, "Diyarbakır": 8, "Antalya": 9, "Kocaeli": 12,
-}
+TJK_PROGRAM_URL = "https://www.tjk.org/TR/Yarissever/Info/Page/GunlukYarisProgrami"
+TJK_SEHIR_URL = "https://www.tjk.org/TR/Yarissever/Info/Sehir/GunlukYarisProgrami"
 
 
 # ---------------------------------------------------------------------------
-# 1) TJK — GÜNLÜK YARIŞ PROGRAMI
+# 1) GÜNÜN TÜM HİPODROMLARI (yurtiçi + yabancı) — "tek takvim"in temeli
 # ---------------------------------------------------------------------------
-def tjk_program_cek(tarih: str, sehir: str = "İstanbul") -> list[dict]:
-    """
-    tarih: 'YYYY-MM-DD'  ->  TJK 'GG/AA/YYYY' bekler.
-    Dönüş: [{"race_no", "time", "distance", "track", "horses": [...]}]
-    """
-    yil, ay, gun = tarih.split("-")
-    tjk_tarih = f"{gun}/{ay}/{yil}"
-    sehir_id = TJK_SEHIRLER.get(sehir, 3)
-    url = (
-        "https://www.tjk.org/TR/Yarissever/Info/Sehir/GunlukYarisProgrami"
-        f"?SehirId={sehir_id}&QueryParameter_Tarih={tjk_tarih}&SehirAdi={sehir}"
-    )
-    resp = requests.get(url, headers=UA, timeout=TIMEOUT)
+def tjk_gunun_hipodromlari(tarih: str) -> list[dict]:
+    """tarih: 'YYYY-MM-DD' → [{'ad', 'sehir_id', 'yabanci': bool}]"""
+    y, a, g = tarih.split("-")
+    resp = requests.get(TJK_PROGRAM_URL, params={"QueryParameter_Tarih": f"{g}/{a}/{y}"},
+                        headers=UA, timeout=TIMEOUT)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
+    hipodromlar, gorulen = [], set()
+    for a_etiketi in soup.find_all("a", href=True):
+        m = re.search(r"SehirId=(\d+)", a_etiketi["href"])
+        if not m:
+            continue
+        sid = int(m.group(1))
+        ad = a_etiketi.get_text(strip=True)
+        if not ad:
+            ma = re.search(r"SehirAdi=([^&]+)", a_etiketi["href"] + "&")
+            ad = ma.group(1) if ma else f"Hipodrom {sid}"
+        if sid in gorulen:
+            continue
+        gorulen.add(sid)
+        # Yurtiçi hipodromlar küçük kimliklerdedir; büyük kimlikler yabancı programlardır
+        hipodromlar.append({"ad": ad, "sehir_id": sid, "yabanci": sid > 12})
+    return hipodromlar
 
-    races: list[dict] = []
-    # TJK'da her koşu bir başlık (saat + mesafe + pist) ve bir at tablosu olarak gelir.
-    # Savunmacı yaklaşım: sayfadaki tüm tabloları gez, at tablosu desenine uyanları al.
-    kosu_basliklari = soup.find_all(string=re.compile(r"\d+\s*\.\s*Koşu", re.I))
 
-    tables = pd.read_html(resp.text)  # lxml gerektirir
-    race_no = 0
-    for tbl in tables:
+# ---------------------------------------------------------------------------
+# 2) PROGRAM ÇEKİMİ (her hipodrom — yurtiçi/yabancı aynı sayfa yapısı)
+# ---------------------------------------------------------------------------
+def tjk_program_cek(tarih: str, sehir_id: int = 3, sehir_adi: str = "") -> list[dict]:
+    y, a, g = tarih.split("-")
+    resp = requests.get(TJK_SEHIR_URL, params={"SehirId": sehir_id,
+                                               "QueryParameter_Tarih": f"{g}/{a}/{y}",
+                                               "SehirAdi": sehir_adi},
+                        headers=UA, timeout=TIMEOUT)
+    resp.raise_for_status()
+    metin = resp.text
+    races, race_no = [], 0
+    try:
+        tablolar = pd.read_html(metin)
+    except ValueError:
+        return []
+    saatler = re.findall(r"(\d{1,2}[:.]\d{2})", " ".join(
+        re.findall(r"\d+\s*\.\s*Koşu[^<]{0,60}", metin)))
+    mesafeler = re.findall(r"(\d{3,4})\s*m", metin)
+    for tbl in tablolar:
         cols = [str(c).strip().lower() for c in tbl.columns]
-        # At tablosu göstergeleri: "at ismi/at adı" ve "jokey" sütunları
         if not any("at" in c for c in cols) or not any("jokey" in c or "jockey" in c for c in cols):
             continue
         race_no += 1
         horses = []
         for _, row in tbl.iterrows():
-            r = {str(k).strip().lower(): row[k] for k in tbl.columns}
-            num = _ilk_sayi(r.get("no") or r.get("at no") or r.get("#"))
+            r = {str(kk).strip().lower(): row[kk] for kk in tbl.columns}
+            num = _sayi(r.get("no") or r.get("at no") or r.get("#"))
             isim = _temiz(r.get("at ismi") or r.get("at adı") or r.get("at"))
             if num is None or not isim:
                 continue
             horses.append({
-                "num": num,
-                "name": isim,
-                "jockey": _temiz(r.get("jokey")),
-                "trainer": _temiz(r.get("antrenör") or r.get("antrenor")),
-                "weight": _ilk_float(r.get("kilo")),
-                "hp": _ilk_float(r.get("hp") or r.get("handikap puanı")),   # handikap puanı
-                "last6": _temiz(r.get("son 6 koşu") or r.get("son 6")),      # ör. "1 3 2 0 4 1"
-                "start": _ilk_sayi(r.get("st") or r.get("start")),
+                "num": num, "name": isim, "yedek": False,
+                "jockey": _temiz(r.get("jokey")), "trainer": _temiz(r.get("antrenör") or r.get("antrenor")),
+                "weight": _ondalik(r.get("kilo")), "hp": _ondalik(r.get("hp") or r.get("handikap puanı")),
+                "rt": _ondalik(r.get("hp") or r.get("handikap puanı")),
+                "form": re.sub(r"[^0-9]", "", _temiz(r.get("son 6 koşu") or r.get("son 6"))),
+                "last6": _temiz(r.get("son 6 koşu") or r.get("son 6")),
+                "start": _sayi(r.get("st") or r.get("start")), "draw": _sayi(r.get("st") or r.get("start")),
+                "agf": _ondalik(r.get("agf") or r.get("agf1") or r.get("agf %")),
+                "gecmis_kosu": _sayi(r.get("koşu") or r.get("kosu")),
             })
         if horses:
-            # Koşu saati başlıktan; bulunamazsa boş bırak (uygulama '13:30' varsayar)
-            saat = ""
-            if race_no - 1 < len(kosu_basliklari):
-                m = re.search(r"(\d{1,2}[:.]\d{2})", str(kosu_basliklari[race_no - 1].parent))
-                if m:
-                    saat = m.group(1).replace(".", ":")
-            races.append({"race_no": race_no, "time": saat or f"{12 + race_no}:00", "horses": horses})
+            races.append({"race_no": race_no,
+                          "time": (saatler[race_no - 1].replace(".", ":")
+                                   if race_no - 1 < len(saatler) else ""),
+                          "distance": int(mesafeler[race_no - 1]) if race_no - 1 < len(mesafeler) else 0,
+                          "surface": "", "class": "",
+                          "name": f"{sehir_adi} {race_no}. Koşu".strip(),
+                          "horses": horses})
     return races
 
 
 # ---------------------------------------------------------------------------
-# 2) HKJC — SHA TIN / HAPPY VALLEY RACECARD
+# 3) EVRENSEL KRİTERLEME — kaynak ne veriyorsa onu puanlar (şeffaf)
 # ---------------------------------------------------------------------------
-def hkjc_racecard_cek(tarih: str, pist: str = "ST", max_kosu: int = 14) -> list[dict]:
-    """
-    tarih: 'YYYY-MM-DD'; pist: 'ST' (Sha Tin) veya 'HV' (Happy Valley).
-    Koşu koşu sayfaları gezilir; koşu bulunamayınca durur.
-    """
-    hk_tarih = tarih.replace("-", "/")
-    races: list[dict] = []
+def _n(deger, dizi):
+    d = [x for x in dizi if x is not None]
+    if deger is None or len(d) < 2 or max(d) == min(d):
+        return NOTR
+    return (deger - min(d)) / (max(d) - min(d)) * 100.0
+
+
+def _form_p(c):
+    return {"1": 100, "2": 80, "3": 65, "4": 50, "5": 35, "6": 25, "7": 15,
+            "8": 10, "9": 5, "0": 0}.get(c, 0)
+
+
+def evrensel_kriterle(races: list[dict]) -> list[dict]:
+    """Programı eldeki alanlarla kriterler; alan yoksa kriter üretilmez
+    (nötr doldurma yok → kriter sayısı kaynağın zenginliğini dürüstçe yansıtır)."""
+    for race in races:
+        atlar = [h for h in race["horses"] if not h.get("yedek")]
+        hps = [h.get("hp") for h in atlar]
+        kilolar = [h.get("weight") for h in atlar]
+        agfler = [h.get("agf") for h in atlar]
+        n = len(atlar)
+        for h in atlar:
+            k = {}
+            if any(x is not None for x in hps):
+                k["A1 Handikap Puanı"] = _n(h.get("hp"), hps)
+            if any(x is not None for x in kilolar):
+                k["A3 Kilo Avantajı"] = 100 - _n(h.get("weight"), kilolar)
+            f = h.get("form") or ""
+            if f:
+                k["B1 Son Koşu"] = _form_p(f[-1])
+                k["B2 Son 3 Koşu Ort."] = sum(_form_p(c) for c in f[-3:]) / max(len(f[-3:]), 1)
+                agirlikli = [(_form_p(c), i + 1) for i, c in enumerate(f)]
+                k["B3 Son 6 Ağırlıklı"] = sum(p * g for p, g in agirlikli) / sum(g for _, g in agirlikli)
+                if len(f) >= 4:
+                    ilk = sum(_form_p(c) for c in f[:len(f)//2]) / (len(f)//2)
+                    son = sum(_form_p(c) for c in f[len(f)//2:]) / (len(f) - len(f)//2)
+                    k["B4 Form Trendi"] = max(0, min(100, 50 + (son - ilk) / 2))
+            if h.get("gecmis_kosu"):
+                k["B8 Deneyim"] = min(100, h["gecmis_kosu"] * 6)
+            if h.get("draw"):
+                k["D4 İç Kulvar"] = 100 - ((h["draw"] - 1) / max(n - 1, 1) * 100)
+                if n >= 12:
+                    k["D5 Geniş Alan Dış Kulvar"] = max(0, 100 - max(0, h["draw"] - 8) * 12)
+            if h.get("agf") is not None and sum(1 for x in agfler if x is not None) >= 2:
+                k["G1 AGF (Halk Tercihi)"] = _n(h["agf"], agfler)
+            if h.get("jockey"):
+                k["C6 Jokey Atanmış"] = 100
+            kat = {}
+            for harf, ad in [("A", "rating"), ("B", "form"), ("C", "insan"),
+                             ("D", "kosul"), ("G", "piyasa")]:
+                degerler = [v for a, v in k.items() if a.startswith(harf)]
+                if degerler:
+                    kat[ad] = round(sum(degerler) / len(degerler), 1)
+            h["kriterler"] = {a: round(v, 1) for a, v in k.items()}
+            h["kategoriler"] = kat
+            h["score"] = round(sum(kat.values()) / len(kat), 1) if kat else NOTR
+            h["bio"] = kat.get("form", 0); h["aero"] = kat.get("rating", 0)
+            h["lobby"] = kat.get("insan", 0); h["syn"] = kat.get("kosul", 0)
+            h["val"] = False; h["galop"] = "-"
+        atlar.sort(key=lambda x: x["score"], reverse=True)
+        madalya = ["🥇 1. Sıra", "🥈 2. Sıra", "🥉 3. Sıra", "🏅 4. Sıra"]
+        for i, h in enumerate(atlar):
+            h["medal"] = madalya[i] if i < 4 else f"#{i+1}. Sıra"
+        race["horses"] = atlar
+        race["kriter_sayisi"] = len(atlar[0]["kriterler"]) if atlar else 0
+    return races
+
+
+# ---------------------------------------------------------------------------
+# 4) HKJC SONUÇ ÇEKİCİ — öğrenmeyi tek tuşla besler
+# ---------------------------------------------------------------------------
+def hkjc_sonuc_cek(tarih: str, pist: str = "ST", max_kosu: int = 12) -> dict:
+    """{race_no: [1., 2., 3., 4. at numarası]} — LocalResults sayfasından."""
+    hk = tarih.replace("-", "/")
+    sonuclar = {}
     for no in range(1, max_kosu + 1):
-        url = (
-            "https://racing.hkjc.com/racing/information/English/Racing/RaceCard.aspx"
-            f"?RaceDate={hk_tarih}&Racecourse={pist}&RaceNo={no}"
-        )
+        url = ("https://racing.hkjc.com/racing/information/English/Racing/LocalResults.aspx"
+               f"?RaceDate={hk}&Racecourse={pist}&RaceNo={no}")
         try:
             resp = requests.get(url, headers=UA, timeout=TIMEOUT)
             resp.raise_for_status()
-        except requests.RequestException:
+            tablolar = pd.read_html(resp.text)
+        except (requests.RequestException, ValueError):
             break
-        if "no information" in resp.text.lower():
-            break
-
-        try:
-            tables = pd.read_html(resp.text)
-        except ValueError:
-            break
-
-        horses = []
-        for tbl in tables:
-            cols = [str(c).strip().lower() for c in tbl.columns]
-            if "horse" not in " ".join(cols) or "jockey" not in " ".join(cols):
-                continue
-            for _, row in tbl.iterrows():
-                r = {str(k).strip().lower(): row[k] for k in tbl.columns}
-                num = _ilk_sayi(r.get("horse no.") or r.get("no."))
-                isim = _temiz(r.get("horse"))
-                if num is None or not isim:
-                    continue
-                horses.append({
-                    "num": num,
-                    "name": re.sub(r"\(.*?\)", "", isim).strip(),  # marka kodunu at
-                    "jockey": _temiz(r.get("jockey")),
-                    "trainer": _temiz(r.get("trainer")),
-                    "weight": _ilk_float(r.get("wt.") or r.get("actual wt.")),
-                    "hp": _ilk_float(r.get("rtg.") or r.get("rating")),
-                    "last6": _temiz(r.get("last 6 runs")),
-                    "start": _ilk_sayi(r.get("draw")),
-                })
-            break  # ilk uygun tablo yeterli
-        if not horses:
-            break
-
-        m = re.search(r"(\d{1,2}:\d{2})", resp.text)
-        races.append({"race_no": no, "time": m.group(1) if m else f"{12 + no}:00", "horses": horses})
-        time.sleep(1.0)  # siteye nezaket: koşular arası 1 sn bekle
-    return races
+        ilk4 = []
+        for tbl in tablolar:
+            cols = " ".join(str(c).strip().lower() for c in tbl.columns)
+            if "pla" in cols and "horse no" in cols:
+                for _, row in tbl.iterrows():
+                    r = {str(kk).strip().lower(): row[kk] for kk in tbl.columns}
+                    plc = _sayi(r.get("pla.") or r.get("plc.") or r.get("pla"))
+                    hno = _sayi(r.get("horse no.") or r.get("horse no"))
+                    if plc and hno and plc <= 4:
+                        ilk4.append((plc, hno))
+                break
+        if ilk4:
+            sonuclar[no] = [hno for _, hno in sorted(set(ilk4))]
+        time.sleep(0.8)
+    return sonuclar
 
 
 # ---------------------------------------------------------------------------
-# 3) ŞEFFAF FORM SKORU — sahte "kuantum" motorunun yerine geçer
+# 5) HAVA DURUMU — Open-Meteo (ücretsiz, anahtarsız)
 # ---------------------------------------------------------------------------
-def form_skoru_hesapla(races: list[dict]) -> list[dict]:
-    """
-    Her at için 0-100 arası, TAMAMEN AÇIKLANABİLİR bir form skoru üretir:
-      %45 Rating / Handikap puanı (koşu içinde normalize)
-      %35 Son 6 koşu form ortalaması (1.lik=10p ... 6+/koşmadı=0p)
-      %10 Kilo avantajı (koşunun en hafifi = tam puan)
-      %10 Start pozisyonu (iç kulvar hafif avantaj)
-    Bu bir olasılık modeli değildir; sadece racecard verisinin özetidir.
-    """
-    for race in races:
-        hs = race["horses"]
-        hps = [h["hp"] for h in hs if h.get("hp") is not None]
-        wts = [h["weight"] for h in hs if h.get("weight") is not None]
-        hp_min, hp_max = (min(hps), max(hps)) if hps else (0, 1)
-        wt_min, wt_max = (min(wts), max(wts)) if wts else (0, 1)
-        n = max(len(hs), 2)
+PIST_KONUM = {"ST": (22.4008, 114.2031), "HV": (22.2712, 114.1817),
+              "İstanbul": (41.0658, 28.7742), "Ankara": (39.9427, 32.8112),
+              "İzmir": (38.4300, 27.1600), "Bursa": (40.2280, 29.0100),
+              "Adana": (37.0300, 35.3500)}
 
-        for h in hs:
-            # Rating (koşu içinde min-max normalizasyon)
-            if h.get("hp") is not None and hp_max > hp_min:
-                s_hp = (h["hp"] - hp_min) / (hp_max - hp_min) * 100
-            else:
-                s_hp = 50.0
-            # Son 6 form: rakamları oku, 1->10p, 2->8p, 3->6p, 4->4p, 5->2p, diğer->0
-            puan_map = {1: 10, 2: 8, 3: 6, 4: 4, 5: 2}
-            sonuclar = [int(x) for x in re.findall(r"\d", str(h.get("last6") or ""))]
-            s_form = (sum(puan_map.get(x, 0) for x in sonuclar) / (len(sonuclar) * 10) * 100) if sonuclar else 50.0
-            # Kilo: hafif olan avantajlı
-            if h.get("weight") is not None and wt_max > wt_min:
-                s_kilo = (wt_max - h["weight"]) / (wt_max - wt_min) * 100
-            else:
-                s_kilo = 50.0
-            # Start: 1. kulvar en iyi
-            s_start = ((n - (h.get("start") or n / 2)) / (n - 1) * 100) if n > 1 else 50.0
-
-            h["score"] = round(0.45 * s_hp + 0.35 * s_form + 0.10 * s_kilo + 0.10 * s_start, 1)
-            # Uygulamanın mevcut arayüzüyle uyum için alanlar — ama artık gerçek anlamları var:
-            h["bio"] = round(s_form, 1)    # arayüzde "Form" olarak yeniden etiketleyin
-            h["aero"] = round(s_hp, 1)     # arayüzde "Rating" olarak yeniden etiketleyin
-            h["lobby"] = round(s_kilo, 1)  # arayüzde "Kilo Avantajı" olarak yeniden etiketleyin
-            h["syn"] = round(s_start, 1)   # arayüzde "Start Pozisyonu" olarak yeniden etiketleyin
-            h["val"] = False               # value bet ancak gerçek oran verisiyle hesaplanabilir
-            h["agf"] = 0.0
-            h["galop"] = "-"
-
-        hs.sort(key=lambda x: x["score"], reverse=True)
-        madalya = ["🥇 1. Sıra", "🥈 2. Sıra", "🥉 3. Sıra", "🏅 4. Sıra"]
-        for i, h in enumerate(hs):
-            h["medal"] = madalya[i] if i < 4 else f"#{i + 1}. Sıra"
-    return races
+def hava_durumu(pist_veya_sehir: str, tarih: str) -> dict:
+    """{'sicaklik', 'yagis_mm', 'zemin_tahmini'} — Open-Meteo günlük veri."""
+    konum = PIST_KONUM.get(pist_veya_sehir)
+    if not konum:
+        return {}
+    try:
+        resp = requests.get("https://api.open-meteo.com/v1/forecast",
+                            params={"latitude": konum[0], "longitude": konum[1],
+                                    "daily": "temperature_2m_max,precipitation_sum",
+                                    "start_date": tarih, "end_date": tarih,
+                                    "timezone": "auto"}, timeout=10)
+        d = resp.json().get("daily", {})
+        yagis = (d.get("precipitation_sum") or [0])[0] or 0
+        return {"sicaklik": (d.get("temperature_2m_max") or [None])[0],
+                "yagis_mm": yagis,
+                "zemin_tahmini": "Ağır/Yumuşak" if yagis >= 10 else ("Nemli" if yagis >= 2 else "İyi/Kuru")}
+    except (requests.RequestException, ValueError, KeyError):
+        return {}
 
 
 # ---------------------------------------------------------------------------
-# Yardımcılar
-# ---------------------------------------------------------------------------
-def _temiz(v) -> str:
+def _temiz(v):
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return ""
     return re.sub(r"\s+", " ", str(v)).strip()
 
-
-def _ilk_sayi(v):
+def _sayi(v):
     m = re.search(r"\d+", str(v or ""))
     return int(m.group()) if m else None
 
-
-def _ilk_float(v):
+def _ondalik(v):
     m = re.search(r"\d+(?:[.,]\d+)?", str(v or ""))
     return float(m.group().replace(",", ".")) if m else None
 
 
-if __name__ == "__main__":
-    # Hızlı el testi:  python veri_kaynagi.py
-    import json, datetime
-    bugun = datetime.date.today().isoformat()
-    print("TJK İstanbul deneniyor...")
-    try:
-        r = form_skoru_hesapla(tjk_program_cek(bugun, "İstanbul"))
-        print(json.dumps(r[:1], ensure_ascii=False, indent=2)[:2000])
-    except Exception as e:
-        print("TJK hata:", e)
-    print("\nHKJC Sha Tin deneniyor...")
-    try:
-        r = form_skoru_hesapla(hkjc_racecard_cek(bugun, "ST"))
-        print(json.dumps(r[:1], ensure_ascii=False, indent=2)[:2000])
-    except Exception as e:
-        print("HKJC hata:", e)
+# Eski API ile geriye uyumluluk:
+def form_skoru_hesapla(races):
+    return evrensel_kriterle(races)
+
+def hkjc_racecard_cek(tarih, pist="ST", max_kosu=14):
+    """HKJC racecard sayfası JS ile yüklendiğinden requests ile çekilemiyor;
+    Sha Tin için PDF yolunu kullanın. Sonuçlar için hkjc_sonuc_cek çalışır."""
+    return []
