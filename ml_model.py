@@ -123,6 +123,77 @@ def value_hesapla(olasilik_yuzde: float, oran: float) -> dict:
             "value": round(deger * 100, 1), "oynanabilir": deger > 0.05}
 
 
+def kaggle_hazirla(races_dosya, runs_dosya, max_kosu: int | None = None) -> pd.DataFrame:
+    """
+    Kaggle 'gdaley/hkracing' veri setini (races.csv + runs.csv, 1997-2005 arası
+    binlerce HK koşusu) bizim kriter adlarımıza çevirir. Her koşu için atların
+    O GÜNE KADARKİ geçmişinden kriterler türetilir (geleceğe bakma yok):
+    A1 rating, A3 kilo, B2 son-3, B5/B6 kariyer, B8 deneyim, B9 mesafe rekoru,
+    B13 dinlenme, B14 yüzey uyumu, D4 kulvar. Çıktı egit_ve_backtest ile uyumlu.
+    """
+    races = pd.read_csv(races_dosya)
+    runs = pd.read_csv(runs_dosya)
+    races.columns = [c.strip().lower() for c in races.columns]
+    runs.columns = [c.strip().lower() for c in runs.columns]
+    gerekli = {"race_id", "horse_id", "result"}
+    if not gerekli.issubset(runs.columns):
+        raise ValueError(f"runs.csv beklenen kolonları içermiyor: {gerekli - set(runs.columns)}")
+    df = runs.merge(races[[c for c in ("race_id", "date", "distance", "surface", "venue")
+                           if c in races.columns]], on="race_id", how="left")
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.sort_values(["date", "race_id"] if "date" in df.columns else ["race_id"])
+    if max_kosu:
+        secilen = df["race_id"].drop_duplicates().tail(max_kosu)
+        df = df[df["race_id"].isin(secilen)]
+
+    gecmis: dict = {}  # horse_id → geçmiş koşu listesi
+    satirlar = []
+    for race_id, grup in df.groupby("race_id", sort=False):
+        kayitlar = []
+        for _, row in grup.iterrows():
+            hid = row["horse_id"]
+            g = gecmis.get(hid, [])
+            n = len(g)
+            w = sum(1 for x in g if x["result"] == 1)
+            t3 = sum(1 for x in g if x["result"] <= 3)
+            ayni_mesafe = [x for x in g if x.get("distance") == row.get("distance")]
+            ayni_yuzey = [x for x in g if x.get("surface") == row.get("surface")]
+            son3 = g[-3:]
+            satir = {
+                "A1 Resmi Rating": float(row["horse_rating"]) if pd.notna(row.get("horse_rating")) else 50.0,
+                "A3 Kilo Avantajı": -float(row["actual_weight"]) if pd.notna(row.get("actual_weight")) else 50.0,
+                "B2 Son 3 Koşu Ort.": (sum(max(0, 100 - (x["result"] - 1) * 12) for x in son3) / len(son3)) if son3 else 50.0,
+                "B5 Kariyer Kazanma %": min(100, w / n * 400) if n else 50.0,
+                "B6 Kariyer İlk-3 %": min(100, t3 / n * 200) if n else 50.0,
+                "B8 Deneyim": min(100, n * 8),
+                "B9 Mesafe Rekoru": (min(100, sum(1 for x in ayni_mesafe if x["result"] <= 3) /
+                                         len(ayni_mesafe) * 200) if ayni_mesafe else 50.0),
+                "B14 Yüzey Uyumu (Çim)": (min(100, sum(1 for x in ayni_yuzey if x["result"] <= 3) /
+                                              len(ayni_yuzey) * 200) if ayni_yuzey else 50.0),
+                "B13 Dinlenme Uyumu": 50.0,
+                "D4 İç Kulvar": (100 - (float(row["draw"]) - 1) * 7) if pd.notna(row.get("draw")) else 50.0,
+                "kosu_id": str(race_id),
+                "kazandi": 1 if row["result"] == 1 else 0,
+                "ilk4": 1 if row["result"] <= 4 else 0,
+            }
+            if "date" in df.columns and g and pd.notna(row.get("date")) and g[-1].get("date") is not None:
+                gunler = (row["date"] - g[-1]["date"]).days
+                satir["B13 Dinlenme Uyumu"] = 100 if 14 <= gunler <= 45 else (65 if gunler <= 90 else 45)
+            satirlar.append(satir)
+            kayitlar.append((hid, {"result": int(row["result"]) if pd.notna(row["result"]) else 99,
+                                   "distance": row.get("distance"), "surface": row.get("surface"),
+                                   "date": row.get("date") if "date" in df.columns else None}))
+        for hid, kayit in kayitlar:  # koşu bittikten SONRA geçmişe ekle (sızıntı yok)
+            gecmis.setdefault(hid, []).append(kayit)
+    out = pd.DataFrame(satirlar)
+    # kilo negatif ölçekte; koşu içi min-max ile 0-100'e getir
+    if "A3 Kilo Avantajı" in out.columns:
+        out["A3 Kilo Avantajı"] = out.groupby("kosu_id")["A3 Kilo Avantajı"].transform(
+            lambda s: 50.0 if s.nunique() <= 1 else (s - s.min()) / (s.max() - s.min()) * 100)
+    return out
+
+
 def model_kaydet(model) -> str:
     """Modeli JSON'a serileştirir (buluta kaydedilebilir, joblib gerekmez)."""
     return json.dumps({"kolonlar": model.kriter_kolonlari_,
