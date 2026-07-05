@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 import time
 import requests
+import io
 import pandas as pd
 from bs4 import BeautifulSoup
 
@@ -64,6 +65,8 @@ def tjk_gunun_hipodromlari(tarih: str) -> list[dict]:
 # 2) PROGRAM ÇEKİMİ (her hipodrom — yurtiçi/yabancı aynı sayfa yapısı)
 # ---------------------------------------------------------------------------
 def tjk_program_cek(tarih: str, sehir_id: int = 3, sehir_adi: str = "") -> list[dict]:
+    """Önce TJK'nın resmi CSV bültenini dener (en sağlam yol — sayfanın kendi
+    'CSV Program' linki), olmazsa HTML tablolarına düşer."""
     y, a, g = tarih.split("-")
     resp = requests.get(TJK_SEHIR_URL, params={"SehirId": sehir_id,
                                                "QueryParameter_Tarih": f"{g}/{a}/{y}",
@@ -71,9 +74,95 @@ def tjk_program_cek(tarih: str, sehir_id: int = 3, sehir_adi: str = "") -> list[
                         headers=UA, timeout=TIMEOUT)
     resp.raise_for_status()
     metin = resp.text
+
+    # --- YOL 1: sayfadaki resmi CSV linki ---
+    mcsv = re.search(r'href="(https://[^"]+/CSV/GunlukYarisProgrami/[^"]+\.csv)"', metin)
+    if mcsv:
+        try:
+            races = _tjk_csv_ayristir(mcsv.group(1), sehir_adi)
+            if races:
+                return races
+        except Exception:
+            pass  # CSV başarısızsa HTML yoluna düş
+
+    # --- YOL 2: HTML tabloları ---
+    return _tjk_html_ayristir(metin, sehir_adi)
+
+
+def _tjk_csv_ayristir(csv_url: str, sehir_adi: str) -> list[dict]:
+    resp = requests.get(csv_url, headers=UA, timeout=TIMEOUT)
+    resp.raise_for_status()
+    ham = resp.content
+    df = None
+    for enc in ("utf-8-sig", "cp1254", "iso-8859-9", "utf-8"):
+        for ayrac in (";", ","):
+            try:
+                aday = pd.read_csv(io.BytesIO(ham), encoding=enc, sep=ayrac)
+                if aday.shape[1] >= 5:
+                    df = aday
+                    break
+            except Exception:
+                continue
+        if df is not None:
+            break
+    if df is None:
+        return []
+    df.columns = [str(c).strip().upper() for c in df.columns]
+
+    def kolon(*adaylar):
+        for c in df.columns:
+            duz = c.replace("İ", "I").replace("Ş", "S").replace("Ö", "O").replace("Ü", "U").replace("Ğ", "G").replace("Ç", "C")
+            for aday in adaylar:
+                if aday in duz:
+                    return c
+        return None
+
+    k_kosu, k_no = kolon("KOSU"), kolon("AT NO", "ATNO", "NO")
+    k_ad = kolon("AT ISMI", "AT ADI", "ISIM")
+    k_jokey, k_kilo = kolon("JOKEY"), kolon("KILO", "SIKLET")
+    k_hp, k_son6 = kolon("HANDIKAP", "HP", "PUAN"), kolon("SON 6", "SON6", "SON ALTI")
+    k_st, k_antrenor = kolon("START", "ST"), kolon("ANTRENOR")
+    k_kosu_sayisi = kolon("KOSU SAYISI", "KOSTUGU")
+    if not (k_kosu and k_ad):
+        return []
+
+    races = []
+    for kosu_no, grup in df.groupby(k_kosu, sort=True):
+        try:
+            rn = int(re.search(r"\d+", str(kosu_no)).group())
+        except (AttributeError, ValueError):
+            continue
+        horses = []
+        for _, row in grup.iterrows():
+            isim = _temiz(row.get(k_ad))
+            if not isim:
+                continue
+            horses.append({
+                "num": _sayi(row.get(k_no)) or len(horses) + 1, "name": isim, "yedek": False,
+                "jockey": _temiz(row.get(k_jokey)) if k_jokey else "",
+                "trainer": _temiz(row.get(k_antrenor)) if k_antrenor else "",
+                "weight": _ondalik(row.get(k_kilo)) if k_kilo else None,
+                "hp": _ondalik(row.get(k_hp)) if k_hp else None,
+                "rt": _ondalik(row.get(k_hp)) if k_hp else None,
+                "form": re.sub(r"[^0-9]", "", _temiz(row.get(k_son6))) if k_son6 else "",
+                "last6": _temiz(row.get(k_son6)) if k_son6 else "",
+                "start": _sayi(row.get(k_st)) if k_st else None,
+                "draw": _sayi(row.get(k_st)) if k_st else None,
+                "agf": None,
+                "gecmis_kosu": _sayi(row.get(k_kosu_sayisi)) if k_kosu_sayisi else None,
+            })
+        if horses:
+            races.append({"race_no": rn, "time": "", "distance": 0, "surface": "",
+                          "class": "", "name": f"{sehir_adi} {rn}. Koşu".strip(),
+                          "horses": horses, "kaynak": "TJK CSV"})
+    races.sort(key=lambda r: r["race_no"])
+    return races
+
+
+def _tjk_html_ayristir(metin: str, sehir_adi: str) -> list[dict]:
     races, race_no = [], 0
     try:
-        tablolar = pd.read_html(metin)
+        tablolar = pd.read_html(io.StringIO(metin))
     except ValueError:
         return []
     saatler = re.findall(r"(\d{1,2}[:.]\d{2})", " ".join(
@@ -197,7 +286,7 @@ def hkjc_sonuc_cek(tarih: str, pist: str = "ST", max_kosu: int = 12) -> dict:
         try:
             resp = requests.get(url, headers=UA, timeout=TIMEOUT)
             resp.raise_for_status()
-            tablolar = pd.read_html(resp.text)
+            tablolar = pd.read_html(io.StringIO(resp.text))
         except (requests.RequestException, ValueError):
             break
         ilk4 = []
@@ -215,6 +304,35 @@ def hkjc_sonuc_cek(tarih: str, pist: str = "ST", max_kosu: int = 12) -> dict:
             sonuclar[no] = [hno for _, hno in sorted(set(ilk4))]
         time.sleep(0.8)
     return sonuclar
+
+
+# ---------------------------------------------------------------------------
+# 4b) TJK AGF ÇEKİCİ — halk tercihi yüzdeleri (value hesabının ham maddesi)
+# ---------------------------------------------------------------------------
+def tjk_agf_cek(tarih: str, sehir_id: int, bahis_no: int = 1) -> dict:
+    """{(kosu_no, at_no): agf_yuzde} — /AGFv2/{sehir}/{ggaayyyy}/TR/{bahis}/1"""
+    y, a, g = tarih.split("-")
+    url = f"https://www.tjk.org/AGFv2/{sehir_id}/{g}{a}{y}/TR/{bahis_no}/1"
+    try:
+        resp = requests.get(url, headers=UA, timeout=TIMEOUT)
+        resp.raise_for_status()
+        tablolar = pd.read_html(io.StringIO(resp.text))
+    except (requests.RequestException, ValueError):
+        return {}
+    agf = {}
+    kosu_no = 0
+    for tbl in tablolar:
+        cols = [str(c).strip().upper() for c in tbl.columns]
+        if not any("AGF" in c for c in cols):
+            continue
+        kosu_no += 1
+        for _, row in tbl.iterrows():
+            r = {str(kk).strip().upper(): row[kk] for kk in tbl.columns}
+            no = _sayi(r.get("AT NO") or r.get("NO"))
+            deger = _ondalik(next((v for kk, v in r.items() if "AGF" in kk), None))
+            if no and deger is not None:
+                agf[(kosu_no, no)] = deger
+    return agf
 
 
 # ---------------------------------------------------------------------------
